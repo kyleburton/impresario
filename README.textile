@@ -46,3 +46,20 @@ h2. What can trigger Workflows?
 
 h2. Serialiation
 
+h3. Recommended Relational Data Model
+
+Two tables:
+
+h4. WORKFLOW_DEFINITIONS
+
+  id integer
+  name varchar(255)
+  version interter
+  definition text
+
+h4. WORKFLOW_INSTANCES
+
+  id integer
+  workflow_id integer fk to workflow_definitions
+  internal_state text
+  external_state text
