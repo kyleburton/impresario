@@ -22,23 +22,6 @@
 
 ;; (test-spec-start-state)
 
-(def door-spec-x
-  {:name "Front Door"
-   ;; NB: what about constructor generate state?  Should we support a function that returns the initial state?
-   ;; :internal-store :some.namespace/make-initial-state
-   :internal-store {:locked? false
-                    :key-id  "761098709817145"}
-   ;; :triggers [{:type :timer {:timer-data-goes-here "1234 4312 abcd"}}
-   ;;            {:type :on-wakeup :some-function]
-   :states  {:open   {:start true
-                      :transitions-to [{:state :closed :if 'close-door?}]}
-             :closed {:transitions-to [{:state :open   :if :can-open-door?}
-                                       {:state :locked :if :lock-door?}]}
-             :locked {:transitions-to [{:state :closed :if :unlock-door?}]}}})
-
-;; (clojure.pprint/pprint (make-workflow door-spec-x))
-
-
 (def door-spec
   {:name "Front Door"
    ;; NB: what about constructor generate state?  Should we support a function that returns the initial state?
@@ -55,12 +38,18 @@
 
 ;; (spec-start-states door-spec)
 
+;; (resolve-symbols-in-spec door-spec)
+
 (def door-workflow (make-workflow door-spec))
+
+;; (clojure.pprint/pprint door-workflow)
 
 (deftest test-start-state-door
   (is (= :open (current-state door-workflow))))
 
 ;; (possible-transitions-from door-workflow :open)
+;; (get-in door-workflow [:definition :states :open :transitions-to])
+;; door-workflow
 
 ;; (test-start-state-door)
 ;; (current-state-info door-workflow)
@@ -72,9 +61,34 @@
 (deftest test-can-transition-door
   (is (not (can-transition? door-workflow)))
   (is (can-transition? (assoc-in door-workflow
-                             [:external-store :locked] false))))
+                                 [:external-store :locked] false))))
 
 ;; (test-can-transition-door)
 
 ;; (symbol-to-combined-keyword close-door?)
 ;; (resolve close-door?)
+
+;; TODO: assert that would-transition-once? does not fire triggers/observers
+
+#_(def simple-workflow
+  (make-workflow
+   {:states
+    {:first-state
+     {:start true
+      :transitions-to
+      [{:state :next-state
+        :if (fn [& args] true)}]}
+     :next-state
+     {:transitions-to
+      [{:state :final-state
+        :if (fn [& args] true)}]}
+     :final-state}}))
+
+#_(deftest test-would-transition-once?
+  (is :next-state
+      (would-transition-once?
+       simple-workflow)))
+
+  ;; TODO: assert that would-transition? does not fire triggers/observers
+  ;; TODO: assert that transition-once! does fire triggers/observers
+  ;; TODO: assert that transition! does fire triggers/observers

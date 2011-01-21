@@ -1,9 +1,9 @@
 (ns impresario.core)
 
-;; TOOD: implement a state as a record / protocol?
-;; TOOD: implement a transitions to as a record / protocol?
-;; TODO: implement the workflow as a record / protocol?
-
+;; state is represented as just a keyword
+;; workflows are simply maps, the key is a state name
+;; values are descriptions of the state, including outbound transitions
+;; observers may be attached to the workflow
 
 (defn spec-start-states [spec]
   (filter #(:start (get (:states spec) %))
@@ -39,7 +39,6 @@
 
 (defn fn-lookup-via-symbol [sym-name & args]
   (let [[ns-name-part sym-name-part] (split-keyword-parts sym-name)]
-    (printf "fn-lookup-via-symbol: %s / %s\n" ns-name-part sym-name-part)
     (ns-resolve (symbol ns-name-part)
                 (symbol sym-name-part))))
 
@@ -69,7 +68,6 @@
   ;; convert whatever thing is into a keyword that contains both the
   ;; package and namespace so that we can serialize, reify and lookup
   ;; and call it by that name in the future...
-  (printf "symbol-to-combined-keyword thing=%s\n" thing)
   (cond
     (keyword? thing)
     (keyword (str (.substring (str spec-ns) 1) "/" (name thing)))
@@ -85,20 +83,20 @@
                                               thing (class thing))))))
 
 (defn resolve-symbol-in-state [spec-ns state]
-  (printf "resolve-symbol-in-state: spec-ns=%s state=%s\n" spec-ns state)
-  (printf "resolve-symbol-in-state: transitions-to=%s\n" (:transitions-to state))
   (merge state
          {:transitions-to
-          (vector
+          (vec
            (map (fn [transition]
-                  (printf "transition=%s\n" transition)
+                  (printf "resolve-symbol-in-state: map body, transition=%s\n"
+                          transition)
                   (if (:if transition)
                     (merge transition {:if (symbol-to-combined-keyword spec-ns (:if transition))})
                     transition))
                 (:transitions-to state)))}))
 
+;; (resolve-symbol-in-state 'some-namespace {:state :state-name :transitions-to [{:if :the-predicate-name}]})
+
 (defn resolve-symbols-in-states [spec-ns states]
-  (printf "resolve-symbols-in-states: stats=%s; ns=%s\n" states spec-ns)
   (loop [m {}
          [k & ks] (keys states)]
     (cond (not k)
@@ -116,11 +114,12 @@
 ;; on construction, keywordize the predicates so it's easier on the users for the namespacing...
 (defn construct-workflow [spec]
   (validate! spec)
-  {:name           (:name spec)
-   :definition     (resolve-symbols-in-spec spec)
-   :internal-store (construct-internal-store spec)
-   :external-store {}
-   :current-state  (spec-start-state spec)})
+  {:name                (:name spec)
+   :definition          (resolve-symbols-in-spec spec)
+   :original-definition spec
+   :internal-store      (construct-internal-store spec)
+   :external-store      {}
+   :current-state       (spec-start-state spec)})
 
 (defmacro make-workflow [spec]
   `(construct-workflow
@@ -138,20 +137,32 @@
 (defn possible-transitions-from [workflow state]
   (get-in workflow [:definition :states state :transitions-to]))
 
+
 (defn resolve-predicate [pred-ns pred-name]
-  (ns-resolve (symbol (name pred-ns)) (symbol (name pred-name))))
+  (.println System/err
+            (format "resolve-predicate: pred-ns:%s pred-name:%s"
+                    pred-ns pred-name))
+  (printf "resolve-predicate: pred-ns:%s pred-name:%s\n"
+          pred-ns pred-name)
+  (ns-resolve (symbol (name pred-ns))
+              (symbol (name pred-name))))
+
 
 (defn can-transition? [workflow]
-  (printf "can-transition?...\n")
+  (printf "can-transition? curr-state:%s  state-info:%s\n"
+          (current-state workflow)
+          (current-state-info workflow))
+  (doseq [transition (possible-transitions-from workflow (current-state workflow))]
+    (printf "  transition:%s\n" (vec transition)))
   (let [curr-state             (current-state workflow)
         state-info             (current-state-info workflow)
         transitions            (possible-transitions-from workflow curr-state)
-        viable-next-states     (filter (fn [transition]
-                                         (printf "testing transition: curr-state=%s state-info=%s transition=%s\n" curr-state state-info transition)
-                                         (let [pred-name (:if transition)
-                                               pred      (resolve-predicate (:ns workflow) pred-name)]
-                                           (printf "pred-name:%s pred=%s\n" pred-name pred)
-                                           (pred workflow)))
+        viable-next-states     (filter
+                                (fn [transition]
+                                  (printf "  Filter Pred: transition=%s\n" transition)
+                                  (let [pred-name (:if transition)
+                                        pred      (resolve-predicate (:ns workflow) pred-name)]
+                                    (pred workflow)))
                                        transitions)]
     ;; TODO: can-transition-to? should return [ name-of-state new-workflow ]
     viable-next-states))
