@@ -1,5 +1,21 @@
 (ns impresario.core)
 
+
+;; TODO: rename state-store / store to 'context'
+;; TODO: triggers should return the new context
+;; TODO: transition*? should return state-name
+;; TODO: transition*! should return tuple [stat-name new-context]
+;; TODO: add sentinal for :stop not just :start
+;; TODO: how to support a 'trace'?  a seq of all the states that were transitioned through and each version of the context at the time (before/after)
+;; TODO: validate 1 and only 1 start state
+;; TODO: place a bound/limit on the # of times a cycle can be followed :: prevents infinite loops
+;; TODO: external triggers: timers, 'waking up' - also support a 'wake' trigger?
+;; TODO: an exception state that any state can transition to on error?
+;; TODO: support [global] error handler when a transition was expected but did not occurr?
+;; TODO: make sure we fire the :on-entry for start states when the workflow is created
+;; TODO: support a registry of workflows?
+;; TODO: default context keys?  :start-time :current-time :history (?)
+
 ;; state is represented as just a keyword
 ;; workflows are simply maps, the key is a state name
 ;; values are descriptions of the state, including outbound transitions
