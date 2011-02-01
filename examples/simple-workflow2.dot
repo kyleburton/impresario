@@ -1,0 +1,10 @@
+digraph "simple-workflow-with-triggers" {
+  "first-state" [shape=ellipse];
+  "first-state" -> "next-state" [label="transition-every-time"];
+  "first-state" -> "intermediate-state" [label="transition-every-time"];
+  "intermediate-state" [shape=box];
+  "intermediate-state" -> "final-state" [label="transition-every-time"];
+  "next-state" [shape=box];
+  "next-state" -> "final-state" [label="transition-every-time"];
+  "final-state" [shape=ellipse];
+}

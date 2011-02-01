@@ -109,3 +109,35 @@
 ;; (run-all-tests)
 
 ;; (spit "examples/simple-workflow.dot" (workflow-to-dot simple-workflow-with-triggers :start))
+
+(comment
+ (spit "examples/simple-workflow2.dot"
+       (workflow-to-dot
+        {:name :simple-workflow-with-triggers
+         :states
+         {:first-state
+          {:start true
+           :on-entry :impresario.test.core/simple-workflow-trigger
+           :transitions
+           [{:state :next-state
+             :if :impresario.test.core/transition-every-time
+             :on-transition :impresario.test.core/simple-workflow-trigger}
+            {:state :intermediate-state
+             :if :impresario.test.core/transition-every-time
+             :on-transition :impresario.test.core/simple-workflow-trigger}]}
+          :intermediate-state
+          {:on-entry :impresario.test.core/simple-workflow-trigger
+           :transitions
+           [{:state :final-state
+             :if :impresario.test.core/transition-every-time
+             :on-transition :impresario.test.core/simple-workflow-trigger}]}
+          :next-state
+          {:on-entry :impresario.test.core/simple-workflow-trigger
+           :transitions
+           [{:state :final-state
+             :if :impresario.test.core/transition-every-time
+             :on-transition :impresario.test.core/simple-workflow-trigger}]}
+          :final-state
+          {:transitions []}}}
+        :first-state))
+ )
