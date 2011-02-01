@@ -108,4 +108,4 @@
 
 ;; (run-all-tests)
 
-;; (spit "x.dot" (workflow-to-dot simple-workflow-with-triggers :start))
+;; (spit "examples/simple-workflow.dot" (workflow-to-dot simple-workflow-with-triggers :start))
