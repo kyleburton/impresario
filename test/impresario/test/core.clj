@@ -106,5 +106,6 @@
 ;; (test-triggers-transition-once)
 
 
-
 ;; (run-all-tests)
+
+;; (spit "x.dot" (workflow-to-dot simple-workflow-with-triggers :start))

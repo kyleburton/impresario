@@ -70,14 +70,14 @@
 
 (defn seqize-triggers [triggers]
   (cond
-      (nil? triggers)
-      nil
+    (nil? triggers)
+    nil
 
-      (or (vector? triggers) (seq? triggers))
-      triggers
+    (or (vector? triggers) (seq? triggers))
+    triggers
 
-      :else
-      [triggers]))
+    :else
+    [triggers]))
 
 (defn on-exit-triggers [workflow state]
   (seqize-triggers (:on-exit (get (:states workflow) state))))
@@ -85,11 +85,14 @@
 (defn on-entry-triggers [workflow state]
   (seqize-triggers (:on-entry (get (:states workflow) state))))
 
+(defn get-transition-info [workflow current-state next-state]
+  (filter (fn [state-info]
+            (= next-state (:state state-info)))
+          (:transitions (get (:states workflow)
+                             current-state))))
+
 (defn on-transition-triggers [workflow current-state next-state]
-  (let [state-info (filter (fn [state-info]
-                             (= next-state (:state state-info)))
-                           (:transitions (get (:states workflow)
-                                              current-state)))]
+  (let [state-info (get-transition-info workflow current-state next-state)]
     (printf "on-transition-triggers: %s to %s : %s" current-state next-state (vec state-info))
     (cond
       (empty? state-info)
@@ -101,9 +104,9 @@
 
       (> 1 (count state-info))
       (RuntimeException.
-        (format "Error: found more than 1 transition from %s to %s?? While looking up transition triggers."
-                current-state
-                next-state))
+       (format "Error: found more than 1 transition from %s to %s?? While looking up transition triggers."
+               current-state
+               next-state))
 
       :else
       (seqize-triggers (:on-transition (first state-info))))))
@@ -139,3 +142,21 @@
       ;; keep trying to transition
       (recur next-state
              (transition-once? workflow next-state state-store)))))
+
+(defn workflow-to-dot [workflow current-state]
+  (let [sb (StringBuilder. (format "digraph \"%s\" {\n" (name (:name workflow))))]
+    (doseq [state (keys (:states workflow))]
+      (let [shape (if (or (:start (get (:states workflow) state))
+                          (empty? (:transitions (get (:states workflow) state))))
+                    "ellipse"
+                    "box")]
+       (.append sb (format "  \"%s\" [shape=%s];\n" (name state)
+                           shape)))
+      (doseq [transition (:transitions (get (:states workflow) state))]
+        ;; name the edges...
+        (.append sb (format "  \"%s\" -> \"%s\" [label=\"%s\"];\n"
+                            (name state)
+                            (name (:state transition))
+                            (name (:if transition))))))
+    (.append sb "}\n")
+    (str sb)))
