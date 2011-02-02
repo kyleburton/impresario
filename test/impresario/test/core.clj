@@ -2,8 +2,8 @@
   (:use [impresario.core] :reload)
   (:use [clojure.test]))
 
-(defn transition-every-time [workflow current-state state-store]
-  (printf "transition-every-time, returning true...\n")
+(defn transition-every-time [workflow current-state context]
+  ;;(printf "transition-every-time, returning true...\n")
   true)
 
 (def simple-workflow
@@ -20,6 +20,8 @@
        :if :impresario.test.core/transition-every-time}]}
     :final-state
     {:transitions []}}})
+
+;; (get-start-state simple-workflow)
 
 (deftest test-would-transition-once?
   (is (= :next-state
@@ -64,7 +66,7 @@
 (def *last-trigger* (atom nil))
 
 (defn simple-workflow-trigger [workflow curr-state next-state store]
-  (printf "simple-workflow-trigger: curr-state:%s store=%s\n" curr-state store)
+  ;;(printf "simple-workflow-trigger: curr-state:%s store=%s\n" curr-state store)
   (reset! *last-trigger* next-state))
 
 (def simple-workflow-with-triggers
@@ -90,6 +92,12 @@
 ;; (on-exit-triggers simple-workflow-with-triggers :first-state)
 ;; (on-entry-triggers simple-workflow-with-triggers :first-state)
 ;; (on-transition-triggers simple-workflow-with-triggers :first-state :next-state)
+
+(deftest test-initialize-workflow
+  (initialize-workflow simple-workflow-with-triggers {})
+  (is (= :first-state @*last-trigger*)))
+
+;; (test-initialize-workflow)
 
 (deftest test-triggers-transition-once
   (let [res-state (transition-once!

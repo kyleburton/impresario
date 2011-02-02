@@ -1,25 +1,20 @@
 (ns impresario.core)
 
-
-;; TODO: rename state-store / store to 'context'
 ;; TODO: triggers should return the new context
 ;; TODO: transition*? should return state-name
 ;; TODO: transition*! should return tuple [stat-name new-context]
-;; TODO: add sentinal for :stop not just :start
-;; TODO: how to support a 'trace'?  a seq of all the states that were transitioned through and each version of the context at the time (before/after)
 ;; TODO: validate 1 and only 1 start state
+;; TODO: add sentinal for :stop not just :start
+;; TODO: support a registry of workflows?
+;; TODO: default context keys?  :start-time :current-time :history (?)
+
+;; TODO: how to support a 'trace'?  a seq of all the states that were transitioned through and each version of the context at the time (before/after)
 ;; TODO: place a bound/limit on the # of times a cycle can be followed :: prevents infinite loops
 ;; TODO: external triggers: timers, 'waking up' - also support a 'wake' trigger?
 ;; TODO: an exception state that any state can transition to on error?
 ;; TODO: support [global] error handler when a transition was expected but did not occurr?
-;; TODO: make sure we fire the :on-entry for start states when the workflow is created
-;; TODO: support a registry of workflows?
-;; TODO: default context keys?  :start-time :current-time :history (?)
-
-;; state is represented as just a keyword
-;; workflows are simply maps, the key is a state name
-;; values are descriptions of the state, including outbound transitions
-;; observers may be attached to the workflow
+;; TODO: Support a [global] 'on-entry' for any state being entered?
+;; TODO: be more accomodating in the definition of predicate symbols: see if we can create a macro that allows us to gleam the namespace the workflow was defined in...
 
 (defn split-keyword-parts [kwd]
   (.split (.substring (str kwd) 1)
@@ -39,15 +34,14 @@
     :else
     (throw (RuntimeException. (format "Don't know how to resolve: '%s'" pred)))))
 
-(defn can-transition-to? [workflow current-state transition-info state-store]
+(defn can-transition-to? [workflow current-state transition-info context]
   (let [pred       (resolve-predicate (:if transition-info))
         state-name (:state transition-info)]
-    (if (pred workflow current-state state-store)
+    (if (pred workflow current-state context)
       state-name
       nil)))
 
-
-(defn transition-once? [workflow current-state state-store]
+(defn transition-once? [workflow current-state context]
   (let [transitions (:transitions (get (:states workflow)
                                        current-state))
         viable-next-states (filter (fn [transition-info]
@@ -55,10 +49,10 @@
                                       workflow
                                       current-state
                                       transition-info
-                                      state-store))
+                                      context))
                                    transitions)]
-    (printf "transitions:%s\n" (vec transitions))
-    (printf "viable-next-states:%s\n" (vec viable-next-states))
+    ;; (printf "transitions:%s\n" (vec transitions))
+    ;; (printf "viable-next-states:%s\n" (vec viable-next-states))
     (cond
       (= 1 (count viable-next-states))
       (:state (first viable-next-states))
@@ -74,15 +68,15 @@
                 current-state
                 (vec viable-next-states)))))))
 
-(defn transition? [workflow current-state state-store]
+(defn transition? [workflow current-state context]
   (loop [prev-state current-state
-         next-state (transition-once? workflow current-state state-store)]
-    (printf "transition? prev-state:%s next-state:%s\n" prev-state next-state)
+         next-state (transition-once? workflow current-state context)]
+    ;;(printf "transition? prev-state:%s next-state:%s\n" prev-state next-state)
     (if (nil? next-state)
       ;; we're done here
       prev-state
       (recur next-state
-             (transition-once? workflow next-state state-store)))))
+             (transition-once? workflow next-state context)))))
 
 (defn seqize-triggers [triggers]
   (cond
@@ -109,7 +103,7 @@
 
 (defn on-transition-triggers [workflow current-state next-state]
   (let [state-info (get-transition-info workflow current-state next-state)]
-    (printf "on-transition-triggers: %s to %s : %s" current-state next-state (vec state-info))
+    ;;(printf "on-transition-triggers: %s to %s : %s" current-state next-state (vec state-info))
     (cond
       (empty? state-info)
       (throw
@@ -127,37 +121,37 @@
       :else
       (seqize-triggers (:on-transition (first state-info))))))
 
-(defn execute-trigger [trigger workflow current-state next-state state-info]
+(defn execute-trigger [trigger workflow current-state next-state context]
   (let [f (resolve-predicate trigger)]
-    (f workflow current-state next-state state-info)))
+    (f workflow current-state next-state context)))
 
-(defn execute-triggers [workflow current-state next-state state-store]
+(defn execute-triggers [workflow current-state next-state context]
   (doseq [trigger (on-exit-triggers workflow current-state)]
-    (execute-trigger trigger workflow current-state next-state state-store))
+    (execute-trigger trigger workflow current-state next-state context))
   (doseq [trigger (on-transition-triggers workflow current-state next-state)]
-    (execute-trigger trigger workflow current-state next-state state-store))
+    (execute-trigger trigger workflow current-state next-state context))
   (doseq [trigger (on-entry-triggers workflow next-state)]
-    (execute-trigger trigger workflow current-state next-state state-store)))
+    (execute-trigger trigger workflow current-state next-state context)))
 
-(defn transition-once! [workflow current-state state-store]
-  (let [next-state (transition-once? workflow current-state state-store)]
+(defn transition-once! [workflow current-state context]
+  (let [next-state (transition-once? workflow current-state context)]
     (if (nil? next-state)
       ;; no transition
       current-state
       (do
-        (execute-triggers workflow current-state next-state state-store)
+        (execute-triggers workflow current-state next-state context)
         next-state))))
 
-(defn transition! [workflow current-state state-store]
+(defn transition! [workflow current-state context]
   (loop [prev-state current-state
-         next-state (transition-once! workflow current-state state-store)]
-    (printf "transition! prev-state:%s next-state:%s\n" prev-state next-state)
+         next-state (transition-once! workflow current-state context)]
+    ;;(printf "transition! prev-state:%s next-state:%s\n" prev-state next-state)
     (if (nil? next-state)
       ;; we're done here, didn't transition
       prev-state
       ;; keep trying to transition
       (recur next-state
-             (transition-once? workflow next-state state-store)))))
+             (transition-once? workflow next-state context)))))
 
 (defn workflow-to-dot [workflow current-state]
   (let [sb (StringBuilder. (format "digraph \"%s\" {\n" (name (:name workflow))))]
@@ -176,3 +170,16 @@
                             (name (:if transition))))))
     (.append sb "}\n")
     (str sb)))
+
+(defn get-start-state [workflow]
+  (first (first (filter (fn [[k v]]
+                    (:start v))
+                  (:states workflow)))))
+
+(defn initialize-workflow [workflow context]
+  "Executes start-state triggers."
+  (let [start-state (get-start-state workflow)
+        state-info  (get (:states workflow) start-state)
+        triggers    (seqize-triggers (:on-entry state-info))]
+    (doseq [trigger triggers]
+      (execute-trigger trigger workflow nil start-state context))))
