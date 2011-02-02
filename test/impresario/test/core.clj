@@ -65,9 +65,10 @@
 ;; support triggers
 (def *last-trigger* (atom nil))
 
-(defn simple-workflow-trigger [workflow curr-state next-state store]
-  ;;(printf "simple-workflow-trigger: curr-state:%s store=%s\n" curr-state store)
-  (reset! *last-trigger* next-state))
+(defn simple-workflow-trigger [workflow curr-state next-state context]
+  ;;(printf "simple-workflow-trigger: curr-state:%s store=%s\n" curr-state context)
+  (reset! *last-trigger* next-state)
+  context)
 
 (def simple-workflow-with-triggers
   {:name :simple-workflow-with-triggers

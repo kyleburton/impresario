@@ -1,8 +1,8 @@
 (ns impresario.core)
 
 ;; TODO: triggers should return the new context
-;; TODO: transition*? should return state-name
-;; TODO: transition*! should return tuple [stat-name new-context]
+;;   TODO: transition*? should return state-name
+;;   TODO: transition*! should return tuple [stat-name new-context]
 ;; TODO: validate 1 and only 1 start state
 ;; TODO: add sentinal for :stop not just :start
 ;; TODO: support a registry of workflows?
