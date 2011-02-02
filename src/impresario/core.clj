@@ -1,8 +1,5 @@
 (ns impresario.core)
 
-;; TODO: triggers should return the new context
-;;   TODO: transition*? should return state-name
-;;   TODO: transition*! should return tuple [stat-name new-context]
 ;; TODO: validate 1 and only 1 start state
 ;; TODO: add sentinal for :stop not just :start
 ;; TODO: support a registry of workflows?
@@ -126,31 +123,32 @@
     (f workflow current-state next-state context)))
 
 (defn execute-triggers [workflow current-state next-state context]
-  (doseq [trigger (on-exit-triggers workflow current-state)]
-    (execute-trigger trigger workflow current-state next-state context))
-  (doseq [trigger (on-transition-triggers workflow current-state next-state)]
-    (execute-trigger trigger workflow current-state next-state context))
-  (doseq [trigger (on-entry-triggers workflow next-state)]
-    (execute-trigger trigger workflow current-state next-state context)))
+  (let [context (atom context)]
+    (doseq [trigger (on-exit-triggers workflow current-state)]
+      (reset! context (execute-trigger trigger workflow current-state next-state @context)))
+    (doseq [trigger (on-transition-triggers workflow current-state next-state)]
+      (reset! context (execute-trigger trigger workflow current-state next-state @context)))
+    (doseq [trigger (on-entry-triggers workflow next-state)]
+      (reset! context (execute-trigger trigger workflow current-state next-state @context)))
+    @context))
 
 (defn transition-once! [workflow current-state context]
   (let [next-state (transition-once? workflow current-state context)]
     (if (nil? next-state)
       ;; no transition
-      current-state
+      [current-state context]
       (do
-        (execute-triggers workflow current-state next-state context)
-        next-state))))
+        [next-state (execute-triggers workflow current-state next-state context)]))))
 
 (defn transition! [workflow current-state context]
-  (loop [prev-state current-state
-         next-state (transition-once! workflow current-state context)]
+  (loop [[prev-state prev-context] [current-state context]
+         [next-state next-context] (transition-once! workflow current-state context)]
     ;;(printf "transition! prev-state:%s next-state:%s\n" prev-state next-state)
     (if (nil? next-state)
       ;; we're done here, didn't transition
-      prev-state
+      [prev-state prev-context]
       ;; keep trying to transition
-      (recur next-state
+      (recur [next-state next-context]
              (transition-once? workflow next-state context)))))
 
 (defn workflow-to-dot [workflow current-state]
@@ -160,8 +158,8 @@
                           (empty? (:transitions (get (:states workflow) state))))
                     "ellipse"
                     "box")]
-       (.append sb (format "  \"%s\" [shape=%s];\n" (name state)
-                           shape)))
+        (.append sb (format "  \"%s\" [shape=%s];\n" (name state)
+                            shape)))
       (doseq [transition (:transitions (get (:states workflow) state))]
         ;; name the edges...
         (.append sb (format "  \"%s\" -> \"%s\" [label=\"%s\"];\n"
@@ -173,8 +171,8 @@
 
 (defn get-start-state [workflow]
   (first (first (filter (fn [[k v]]
-                    (:start v))
-                  (:states workflow)))))
+                          (:start v))
+                        (:states workflow)))))
 
 (defn initialize-workflow [workflow context]
   "Executes start-state triggers."
