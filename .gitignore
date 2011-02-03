@@ -2,3 +2,6 @@ pom.xml
 *jar
 lib
 classes
+.DS_Store
+README.textile.html
+

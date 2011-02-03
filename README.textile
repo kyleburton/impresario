@@ -1,52 +1,44 @@
 h1. Impresario
 
+A Workflow, or State Machine library for Clojure.
+
 h1. What is a Workflow?
 
-There are many implementations of workflow systems in many languages.  There
-are even standard workflow definitions and systmes (BPEL, XPDL).
+There are many implementations of workflow systems in many languages.  There are even standard workflow definitions and systmes (BPEL, XPDL).  This implementation takes inspiration from those implementations.  It is not attempting to be any of those.  I needed to model a conversation with a 'bot' and needed a simple, light weight workflow system that was easy for me to use, easy to serialize and followed the lead of Clojure's immutable data structures.
 
-Impresario workflows are state machines with well defined, connected graphs,
-transitions and trigger conditions.  Workflows are implemented as simple
-Clojure data strucutres.
+Impresario workflows are state machines.  Workflows declare a graph with nodes (states), vertexes (transitions), and observers of those nodes and vertexes (trigger conditions).  Workflows are implemented as an immutable Clojure map.  Current state is modeled as a keyword.  The context, or state, for the workflow is also modeled as an immutable map (the default).
 
-The workflow declaration defines nodes, which are represented as Clojure symbols.
+A workflow may have one and only one start state.  Any node from which there are no possible transitions away from the node are terminal nodes.
 
-A workflow may have one and only one default entry point.  Any node from which there
-are no possible transitions away from the node are terminal nodes.
+h1. Transitioning Between States and Context
 
+Transition predicates (@:if@) are used to determine if, from a given state, with a given context, a specific edge can be followed.  These predicates are given access to the context, and shoudl not modify it - only to return true or false indicating if the edge should be followed.
+
+You can test the workflow to see if a transition would take place by invoking @transition-once?@ to see if at least 1 transition can be made, or @transition?@ to see how far the workflow would transition given a context.
+
+h1. Triggers
+
+Triggers are executed when @transition-once!@ and @transition!@ are used to step the workflow forward.  Triggers return the new context, and thus have the ability to return a new context (derived from the previous context).
+
+There are 3 supported types of triggers:
+
+* on entry into a state
+* when an edge is followed
+* on exit from a state
+
+Triggers must be declared as Clojure keywords, triggers may be a single keyword or a seq of keywords.   When a transition is taking place, the 'exit' triggers are invoked first - indicating that the previous state is being left.   The transition's triggers are then executed, followed by the 'on enter' triggers for the new state.
+
+Each of these triggers must return the state that will be passed to the next trigger, as well as be returned from the transition function.
 
 h2. External Triggers
 
-Waking up a workflow.  External actors make trigger or awaken a workflow
-providing new state information for the workflow so that it may make another
-transition.
+_unfinished section_
 
-h2. What do Workflows have access to?
-
-Workflows have access to a key value storage area in which they may store the
-workflow state.  There are two main stores, an internal store which is only
-accessible to the workflow and an external store which is visible to both the
-workflow and code external to the workflow.
-
-h2. Immutability and the Workfow's Store
-
-Workflows and their stores should be immutable.  This provides calling code the
-ability to test a workflow to see where it would transition to if a transition
-were made.
-
-Some thought needs to be put into this, as there will likely be side-effects
-caused by the invocation of trigger and observer functions.  It is very useful
-to see if a workflow would transition and to what final state it would
-transition -- one way to model this is to separate the transition predicates
-from the observers / triggers of external actions.
-
-h2. What can Workflows interact with?
-
-h2. What can trigger Workflows?
+Waking up a workflow.  External actors make trigger or awaken a workflow providing new state information for the workflow so that it may make another transition.
 
 h2. Serialiation
 
-h3. Recommended Relational Data Model
+h3. Recommended Data Model
 
 Two tables:
 
@@ -63,3 +55,18 @@ h4. WORKFLOW_INSTANCES
   workflow_id integer fk to workflow_definitions
   internal_state text
   external_state text
+
+
+h1. Future Work
+
+h3. global exception state
+
+A declared state, with possible transition's out, but no explicit edges leading in.  If any predicate or trigger throws an exception, this state is entered.  This gives the exception state the ability to handle errors and transition to one of the other states - or abort the workflow completely (by re-raising the exception).
+
+h3. Timeouts
+
+Each node should have the ability to declare a particular edge to be followed after some amount of time has elapsed.
+
+Workflows should support a 'global' timeout.  If the workflow has not transitioned (or been woken up) in the declared time span, it should cause an exception within the workflow.  This allows workflow instances to be expired, discarded, etc.
+
+
