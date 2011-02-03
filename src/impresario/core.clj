@@ -1,4 +1,5 @@
-(ns impresario.core)
+(ns impresario.core
+  (:require [clojure.contrib.pprint :as pp]))
 
 ;; TODO: validate 1 and only 1 start state
 ;; TODO: add sentinal for :stop not just :start
@@ -144,14 +145,23 @@
     (printf "> executing trigger: %s/%s state:%s/%s\n" trigger f current-state next-state)
     (f workflow current-state next-state context)))
 
-(defn execute-triggers [workflow current-state next-state context]
-  (let [context (atom context)]
+(defn execute-triggers [workflow current-state next-state curr-context]
+  (let [context (atom curr-context)
+        set-context!
+        (fn [trigger-type trigger]
+          (let [v (execute-trigger trigger workflow current-state next-state @context)]
+            (printf "!! execute-triggers/set-context! updated from: %s to %s\n" @context v)
+            (if-not (map? v)
+              (throw (RuntimeException. (format "Error: new context is not a map! : %s trigger:%s/%s" v trigger-type trigger))))
+            (if (empty? v)
+              (throw (RuntimeException. (format "Error: new context is empty! : current-state:%s next-state:%s trigger:%s/%s" current-state next-state trigger-type trigger))))
+            (reset! context v)))]
     (doseq [trigger (on-exit-triggers workflow current-state)]
-      (reset! context (execute-trigger trigger workflow current-state next-state @context)))
+      (set-context! :on-exit       trigger))
     (doseq [trigger (on-transition-triggers workflow current-state next-state)]
-      (reset! context (execute-trigger trigger workflow current-state next-state @context)))
+      (set-context! :on-transition trigger))
     (doseq [trigger (on-entry-triggers workflow next-state)]
-      (reset! context (execute-trigger trigger workflow current-state next-state @context)))
+      (set-context! :on-entry      trigger))
     @context))
 
 (defn transition-once! [workflow current-state context]
@@ -160,17 +170,26 @@
       [current-state context]
       [next-state (execute-triggers workflow current-state next-state context)])))
 
+(defn is-final-state? [workflow state-name]
+  (get-in workflow [:states state-name :stop]))
+
 (defn transition! [workflow current-state context & [max]]
   (if (nil? workflow)
     (throw (RuntimeException. "Error: invalid workflow (nil)!")))
   (loop [[prev-state prev-context] [current-state context]
          [next-state next-context] (transition-once! workflow current-state context)
-         iterations (or max 100)]
+         max        (or max 100)
+         iterations max]
     ;;(printf "transition! prev-state:%s next-state:%s\n" prev-state next-state)
+    (printf "!! transition! transitioned %s => %s\n" prev-state next-state)
+    (pp/pprint next-context)
     (cond
       ;; we're done here, didn't transition
       (nil? next-state)
       [prev-state prev-context]
+
+      (is-final-state? workflow next-state)
+      [next-state next-context]
 
       (zero? iterations)
       (throw (RuntimeException. (format "Error: maximum number of iterations [%s] exceeded, aborting flow." max)))
@@ -178,7 +197,8 @@
       ;; keep trying to transition
       :else
       (recur [next-state next-context]
-             (transition-once! workflow next-state context)
+             (transition-once! workflow next-state next-context)
+             max
              (dec iterations)))))
 
 (defn workflow-to-dot [workflow current-state]
@@ -187,9 +207,13 @@
       (let [shape (if (or (:start (get (:states workflow) state))
                           (empty? (:transitions (get (:states workflow) state))))
                     "ellipse"
-                    "box")]
-        (.append sb (format "  \"%s\" [shape=%s];\n" (name state)
-                            shape)))
+                    "box")
+            style (if (= current-state state)
+                    "bold"
+                    "")]
+
+        (.append sb (format "  \"%s\" [shape=%s,style=%s];\n" (name state)
+                            shape style)))
       (doseq [transition (:transitions (get (:states workflow) state))]
         ;; name the edges...
         (let [to-state (:state transition)
@@ -225,8 +249,13 @@
   (let [start-state (get-start-state workflow)
         state-info  (get (:states workflow) start-state)
         triggers    (seqize-triggers (:on-entry state-info))]
-    (doseq [trigger triggers]
-      (execute-trigger trigger workflow nil start-state context))))
+    (loop [[trigger triggers] triggers
+           context context]
+      (printf "initialize-workflow: trigger=%s context=%s\n" trigger context)
+      (if trigger
+        (recur triggers
+               (execute-trigger trigger workflow nil start-state context))
+        context))))
 
 
 (defonce *registered-workflows* (atom {}))
