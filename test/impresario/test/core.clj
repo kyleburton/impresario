@@ -22,12 +22,14 @@
     :final-state
     {:transitions []}}})
 
+(register-workfow! :simple-workflow simple-workflow)
+
 ;; (get-start-state simple-workflow)
 
 (deftest test-would-transition-once?
   (is (= :next-state
          (transition-once?
-          simple-workflow
+          :simple-workflow
           :first-state
           {}))))
 
@@ -36,7 +38,7 @@
 (deftest test-would-transition?
   (is (= :final-state
          (transition?
-          simple-workflow
+          :simple-workflow
           :first-state
           {}))))
 
@@ -96,13 +98,15 @@
     :final-state
     {:transitions []}}})
 
+(register-workfow! :simple-workflow-with-triggers simple-workflow-with-triggers)
+
 ;; *last-trigger*
 ;; (on-exit-triggers simple-workflow-with-triggers :first-state)
 ;; (on-entry-triggers simple-workflow-with-triggers :first-state)
 ;; (on-transition-triggers simple-workflow-with-triggers :first-state :next-state)
 
 (deftest test-initialize-workflow
-  (initialize-workflow simple-workflow-with-triggers {})
+  (initialize-workflow :simple-workflow-with-triggers {})
   (is (= :first-state @*last-trigger*)))
 
 ;; (test-initialize-workflow)
@@ -110,14 +114,14 @@
 (deftest test-triggers-transition-once
   (let [[res-state new-context]
         (transition-once!
-         simple-workflow-with-triggers
+         :simple-workflow-with-triggers
          :first-state
          {})]
     (printf "new-context:\n")
     (pp/pprint new-context)
     (is (= :next-state res-state))
     (is (= :next-state @*last-trigger*))
-    (let [[res-state new-context] (transition-once! simple-workflow-with-triggers
+    (let [[res-state new-context] (transition-once! :simple-workflow-with-triggers
                                                     res-state
                                                     new-context)]
       (is (= :final-state @*last-trigger*))
@@ -187,3 +191,9 @@
            {:transitions []}}}
          :first-state))
   )
+
+(comment
+
+  (run-tests)
+
+)
