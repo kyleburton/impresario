@@ -191,6 +191,7 @@
                                (resolve-keyword-to-fn (:context-validator-fn workflow))
                                nil)
         context (atom curr-context)
+        uuid    (:uuid curr-context)
         set-context!
         (fn [trigger-type trigger]
           (let [v (execute-trigger trigger workflow current-state next-state @context)]
@@ -204,7 +205,10 @@
       (set-context! :on-transition trigger))
     (doseq [trigger (on-entry-triggers workflow next-state)]
       (set-context! :on-entry      trigger))
-    @context))
+    ;; UUID can't be lost from or overidden in the context
+    (assoc
+        @context
+      :uuid uuid)))
 
 (defn transition-once! [workflow current-state context]
   (let [workflow (get-workflow workflow)
@@ -220,10 +224,10 @@
 (defn transition! [workflow current-state context & [max]]
   (if (nil? workflow)
     (throw (RuntimeException. "Error: invalid workflow (nil)!")))
-  (let [workflow (get-workflow workflow)]
+  (let [workflow (get-workflow workflow)
+        max (or max 100)]
    (loop [[prev-state prev-context] [current-state context]
           [next-state next-context] (transition-once! workflow current-state context)
-          max        (or max 100)
           iterations max]
      ;;(printf "transition! prev-state:%s next-state:%s\n" prev-state next-state)
      (printf "!! transition! transitioned %s => %s\n" prev-state next-state)
@@ -243,7 +247,6 @@
        :else
        (recur [next-state next-context]
               (transition-once! workflow next-state next-context)
-              max
               (dec iterations))))))
 
 (defn workflow-to-dot [workflow current-state]
@@ -302,5 +305,7 @@
       (if trigger
         (recur triggers
                (execute-trigger trigger workflow nil start-state context))
-        context))))
+        (assoc
+            context
+          :uuid (str (java.util.UUID/randomUUID)))))))
 

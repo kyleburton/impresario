@@ -96,7 +96,8 @@
        :if :impresario.test.core/transition-every-time
        :on-transition :impresario.test.core/simple-workflow-transition-trigger}]}
     :final-state
-    {:transitions []}}})
+    {:stop true
+     :transitions []}}})
 
 (register-workfow! :simple-workflow-with-triggers simple-workflow-with-triggers)
 
@@ -124,9 +125,17 @@
     (let [[res-state new-context] (transition-once! :simple-workflow-with-triggers
                                                     res-state
                                                     new-context)]
-      (is (= :final-state @*last-trigger*))
-      (printf "new-context:\n")
-      (pp/pprint new-context))))
+      (is (= :final-state @*last-trigger*)))))
+
+(deftest test-uuid-is-carried-forward
+  (let [initial-context (initialize-workflow :simple-workflow-with-triggers {})
+        uuid            (:uuid initial-context)
+        [res-state new-context]
+        (transition!
+         :simple-workflow-with-triggers
+         :first-state
+         initial-context)]
+    (is (= uuid (:uuid new-context)))))
 
 
 ;; (test-triggers-transition-once)
