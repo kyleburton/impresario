@@ -81,6 +81,7 @@
 
 (def simple-workflow-with-triggers
   {:name :simple-workflow-with-triggers
+   :on-transition :impresario.core/path-tracing-trigger
    :states
    {:first-state
     {:start true
@@ -136,6 +137,18 @@
          :first-state
          initial-context)]
     (is (= uuid (:uuid new-context)))))
+
+
+(deftest test-path-tracing-trigger
+  (let [initial-context (initialize-workflow :simple-workflow-with-triggers {})
+        [res-state new-context]
+        (transition!
+         :simple-workflow-with-triggers
+         :first-state
+         initial-context)]
+    (is (not (empty? (:trace new-context))))
+    (printf "THE FINAL CONTEXT:\n")
+    (pp/pprint new-context)))
 
 
 ;; (test-triggers-transition-once)

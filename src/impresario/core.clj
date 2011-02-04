@@ -178,6 +178,12 @@
       :else
       (seqize-triggers (:on-transition (first state-info))))))
 
+(defn global-transition-triggers [workflow]
+  (let [workflow   (get-workflow workflow)]
+    (if-let [f (:on-transition workflow)]
+      (seqize-triggers f)
+      nil)))
+
 (defn execute-trigger [trigger workflow current-state next-state context]
   (let [workflow (get-workflow workflow)
         f (resolve-keyword-to-fn trigger)]
@@ -201,6 +207,8 @@
             (reset! context v)))]
     (doseq [trigger (on-exit-triggers workflow current-state)]
       (set-context! :on-exit       trigger))
+    (doseq [trigger (global-transition-triggers workflow)]
+      (set-context! :global-on-transition trigger))
     (doseq [trigger (on-transition-triggers workflow current-state next-state)]
       (set-context! :on-transition trigger))
     (doseq [trigger (on-entry-triggers workflow next-state)]
@@ -311,3 +319,9 @@
             context
           :uuid (str (java.util.UUID/randomUUID)))))))
 
+
+(defn path-tracing-trigger [workflow curr-state next-state context]
+  (assoc
+      context
+    :trace (conj (:trace context [])
+                 [curr-state next-state])))
