@@ -167,6 +167,25 @@
          :first-state
          {}))))
 
+(deftest test-very-limited-max-transitions
+  (is (thrown-with-msg? RuntimeException #"Error: maximum number of iterations"
+        (transition!
+         {:name :simple-workflow-with-triggers
+          :max-transitions 0
+          :states
+          {:first-state
+           {:start true
+            :on-entry :impresario.test.core/simple-workflow-entry-trigger
+            :transitions
+            [{:state :final-state
+              :if :impresario.test.core/transition-every-time
+              :on-transition :impresario.test.core/simple-workflow-transition-trigger}]}
+           :final-state
+           {:on-entry :impresario.test.core/simple-workflow-entry-trigger
+            :transitions []}}}
+         :first-state
+         {}))))
+
 ;; (test-context-validator)
 
 (comment

@@ -221,11 +221,13 @@
   (let [workflow (get-workflow workflow)]
     (get-in workflow [:states state-name :stop])))
 
-(defn transition! [workflow current-state context & [max]]
+(def *default-max-global-transitions* 100)
+
+(defn transition! [workflow current-state context]
   (if (nil? workflow)
     (throw (RuntimeException. "Error: invalid workflow (nil)!")))
   (let [workflow (get-workflow workflow)
-        max (or max 100)]
+        max (or (:max-transitions workflow) *default-max-global-transitions*)]
    (loop [[prev-state prev-context] [current-state context]
           [next-state next-context] (transition-once! workflow current-state context)
           iterations max]
