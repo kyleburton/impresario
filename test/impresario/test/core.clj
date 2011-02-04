@@ -127,10 +127,34 @@
 
 ;; (test-triggers-transition-once)
 
-
-;; (run-all-tests)
+;
+; (run-all-tests)
 
 ;; (spit "examples/simple-workflow.dot" (workflow-to-dot simple-workflow-with-triggers :start))
+
+(defn is-not-valid-context? [workflow current-state next-state trigger-type trigger curr-context v]
+  (throw (RuntimeException. "INVALID")))
+
+(deftest test-context-validator
+  (is (thrown-with-msg? RuntimeException #"INVALID"
+        (transition-once!
+         {:name :simple-workflow-with-triggers
+          :context-validator-fn :impresario.test.core/is-not-valid-context?
+          :states
+          {:first-state
+           {:start true
+            :on-entry :impresario.test.core/simple-workflow-entry-trigger
+            :transitions
+            [{:state :final-state
+              :if :impresario.test.core/transition-every-time
+              :on-transition :impresario.test.core/simple-workflow-transition-trigger}]}
+           :final-state
+           {:on-entry :impresario.test.core/simple-workflow-entry-trigger
+            :transitions []}}}
+         :first-state
+         {}))))
+
+;; (test-context-validator)
 
 (comment
   (spit "examples/simple-workflow2.dot"

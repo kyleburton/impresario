@@ -146,15 +146,16 @@
     (f workflow current-state next-state context)))
 
 (defn execute-triggers [workflow current-state next-state curr-context]
-  (let [context (atom curr-context)
+  (let [context-validator-fn (if (:context-validator-fn workflow)
+                               (resolve-keyword-to-fn (:context-validator-fn workflow))
+                               nil)
+        context (atom curr-context)
         set-context!
         (fn [trigger-type trigger]
           (let [v (execute-trigger trigger workflow current-state next-state @context)]
             (printf "!! execute-triggers/set-context! updated from: %s to %s\n" @context v)
-            (if-not (map? v)
-              (throw (RuntimeException. (format "Error: new context is not a map! : %s trigger:%s/%s" v trigger-type trigger))))
-            (if (empty? v)
-              (throw (RuntimeException. (format "Error: new context is empty! : current-state:%s next-state:%s trigger:%s/%s" current-state next-state trigger-type trigger))))
+            (if context-validator-fn
+              (context-validator-fn workflow current-state next-state trigger-type trigger curr-context v))
             (reset! context v)))]
     (doseq [trigger (on-exit-triggers workflow current-state)]
       (set-context! :on-exit       trigger))
@@ -278,3 +279,14 @@
 
 (defn lookup-workflow [name]
   (get @*registered-workflows* name))
+
+(defn get-workflow [wkflow]
+  (cond
+    (keyword? wkflow)
+    (lookup-workflow wkflow)
+
+    (map? wkflow)
+    wkflow
+
+    :else
+    (throw (RuntimeException. (format "Error: can't get workflow via '%s' not a keyword (lookup) or a map (identity)" wkflow)))))
