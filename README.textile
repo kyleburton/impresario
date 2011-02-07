@@ -10,7 +10,7 @@ Impresario workflows are state machines.  Workflows declare a graph with nodes (
 
 A workflow may have one and only one start state (maked with @:start@).  Terminal states must be marked with a @:stop@.
 
-!examples/simple-workflow.dot.png!
+!tree/master/examples/simple-workflow.dot.png!
 
 
 <pre class="code">
