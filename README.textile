@@ -1,34 +1,58 @@
 h1. Impresario
 
-A Workflow, or State Machine library for Clojure.
+A light weight workflow, or state machine library in Clojure.
 
 h1. What is a Workflow?
 
-There are many implementations of workflow systems in many languages.  There are even standard workflow definitions and systmes (BPEL, XPDL).  This implementation takes inspiration from those implementations.  It is not attempting to be any of those.  I needed to model a conversation with a 'bot' and needed a simple, light weight workflow system that was easy for me to use, easy to serialize and followed the lead of Clojure's immutable data structures.
+There are many implementations of workflow systems in many languages.  There are even standard workflow definitions and systmes (BPEL, XPDL).  This implementation takes inspiration from those implementations.  Impresario is not attempting to be any of those.  I needed to model a conversation with a 'bot' and needed a simple, light weight workflow system that was easy for me to use, easy to serialize and followed the lead of Clojure's immutable data structures.
 
 Impresario workflows are state machines.  Workflows declare a graph with nodes (states), vertexes (transitions), and observers of those nodes and vertexes (trigger conditions).  Workflows are implemented as an immutable Clojure map.  Current state is modeled as a keyword.  The context, or state, for the workflow is also modeled as an immutable map (the default).
 
-A workflow may have one and only one start state.  Any node from which there are no possible transitions away from the node are terminal nodes.
+A workflow may have one and only one start state (maked with @:start@).  Terminal states must be marked with a @:stop@.
+
+!examples/simple-workflow.dot.png!
+
+
+<pre class="code">
+{:name :simple-workflow
+   :states
+   {:first-state
+    {:start true
+     :transitions
+     [{:state :next-state
+       :if :impresario.test.core/transition-every-time}]}
+    :next-state
+    {:transitions
+     [{:state :final-state
+       :if :impresario.test.core/transition-every-time}]}
+    :final-state
+    {:transitions []}}}
+</pre>
 
 h1. Transitioning Between States and Context
 
-Transition predicates (@:if@) are used to determine if, from a given state, with a given context, a specific edge can be followed.  These predicates are given access to the context, and shoudl not modify it - only to return true or false indicating if the edge should be followed.
+Transition predicates (@:if@ and @:unless@) are used to determine if, from a given state with a given context a specific edge can be followed.  These predicates are given access to the context, and should not modify it - only to return true or false indicating if the edge should be followed.
 
-You can test the workflow to see if a transition would take place by invoking @transition-once?@ to see if at least 1 transition can be made, or @transition?@ to see how far the workflow would transition given a context.
+You can test the workflow to see if a transition would take place by invoking @transition-once?@ to see if at least 1 transition can be made, or @transition?@ to see how far the workflow would transition with a given context.  Note that this may not be the same path taken during action transitioning as the trigger functions are there specifically so the context can be modified.  Doing so may alter the path identified by the predicate functions.  In practice, this is up to the implementor of the workflow to decited how they want their predicates and triggers to interact.
 
 h1. Triggers
 
 Triggers are executed when @transition-once!@ and @transition!@ are used to step the workflow forward.  Triggers return the new context, and thus have the ability to return a new context (derived from the previous context).
 
-There are 3 supported types of triggers:
+There are a few supported types of triggers:
 
-* on entry into a state
-* when an edge is followed
-* on exit from a state
+* a single trigger for on _any_ transition
+* on entry into a specific state
+* when a specific edge is followed
+* on exit from a specific state
 
-Triggers must be declared as Clojure keywords, triggers may be a single keyword or a seq of keywords.   When a transition is taking place, the 'exit' triggers are invoked first - indicating that the previous state is being left.   The transition's triggers are then executed, followed by the 'on enter' triggers for the new state.
+Triggers must be declared within the workflow as Clojure keywords, triggers may be a single keyword or a seq of keywords.   When a transition is taking place, the 'exit' triggers are invoked first - indicating that the previous state is being left.   The transition's triggers are then executed, followed by the 'on enter' triggers for the new state.
 
 Each of these triggers must return the state that will be passed to the next trigger, as well as be returned from the transition function.
+
+h2. Global @:on-transition@
+
+A workflow wide @:on-transition@ trigger may be declared.  This observer is executed after the on-exit triggers have been fired for a state, but before any edge specific on-transition triggers are invoked.
 
 h2. External Triggers
 
