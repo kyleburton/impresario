@@ -16,7 +16,7 @@
 
 (defonce *registered-workflows* (atom {}))
 
-(defn register-workfow [name definition]
+(defn register-workflow [name definition]
   (if-not (keyword? name)
     (throw (RuntimeException. (format "workflow name [%s] must be a keyword, it was: %s" name (class name)))))
   (swap! *registered-workflows*
@@ -27,10 +27,10 @@
 ;; TODO: resolve/store off the *ns* predicates via the macro
 ;; TODO: support :unless predicates
 
-(defmacro register-workfow! [name definition]
+(defmacro register-workflow! [name definition]
   ;; walk the tree, anywhere we have one of [:if :unless :on-entry
   ;; :on-exit, :on-transition] do the ns resolution
-  `(register-workfow ~name ~definition))
+  `(register-workflow ~name ~definition))
 
 (defn lookup-workflow [name]
   (get @*registered-workflows* name))
@@ -305,7 +305,7 @@
 
 (defn initialize-workflow [workflow context]
   "Executes start-state triggers."
-  (let [workflow (get-workflow workflow)
+  (let [workflow    (get-workflow    workflow)
         start-state (get-start-state workflow)
         state-info  (get (:states workflow) start-state)
         triggers    (seqize-triggers (:on-entry state-info))]
