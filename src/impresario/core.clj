@@ -83,6 +83,8 @@
 
 
 (defn can-transition-to? [workflow current-state transition-info context]
+  (if-not (contains? (:states workflow) current-state)
+    (throw (RuntimeException. (format  "Error: current-state of %s is invalid. No point in checking transition possibilities." current-state ))))
   (let [pred       (get-transition-predicate-fn transition-info)
         state-name (:state transition-info)]
     (printf "> can-transition-to? testing [%s->%s] pred:%s\n" current-state state-name pred)
