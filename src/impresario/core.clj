@@ -224,7 +224,7 @@
   (let [workflow (get-workflow workflow)
         next-state (transition-once? workflow current-state context)]
     (if-not next-state
-      [current-state context]
+      [nil context]
       [next-state (execute-triggers workflow current-state next-state context)])))
 
 (defn is-final-state? [workflow state-name]
