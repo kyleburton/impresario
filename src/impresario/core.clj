@@ -270,10 +270,10 @@
                     "ellipse"
                     "box")
             style (if (= current-state state)
-                    "bold"
+                    ",style=bold"
                     "")]
 
-        (.append sb (format "  \"%s\" [shape=%s,style=%s];\n" (name state)
+        (.append sb (format "  \"%s\" [shape=%s%s];\n" (name state)
                             shape style)))
       (doseq [transition (:transitions (get (:states workflow) state))]
         ;; name the edges...
