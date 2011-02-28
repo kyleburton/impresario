@@ -311,7 +311,7 @@
         start-state (get-start-state workflow)
         state-info  (get (:states workflow) start-state)
         triggers    (seqize-triggers (:on-entry state-info))]
-    (loop [[trigger triggers] triggers
+    (loop [[trigger & triggers] triggers
            context context]
       (printf "initialize-workflow: trigger=%s context=%s\n" trigger (with-out-str (pp/pprint context)))
       (if trigger
