@@ -22,7 +22,7 @@
     :final-state
     {:transitions []}}})
 
-(register-workfow! :simple-workflow simple-workflow)
+(register-workflow! :simple-workflow simple-workflow)
 
 ;; (get-start-state simple-workflow)
 
@@ -100,7 +100,7 @@
     {:stop true
      :transitions []}}})
 
-(register-workfow! :simple-workflow-with-triggers simple-workflow-with-triggers)
+(register-workflow! :simple-workflow-with-triggers simple-workflow-with-triggers)
 
 ;; *last-trigger*
 ;; (on-exit-triggers simple-workflow-with-triggers :first-state)
