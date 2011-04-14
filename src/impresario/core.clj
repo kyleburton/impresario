@@ -223,7 +223,12 @@
         next-state (transition-once? workflow current-state context)]
     (if-not next-state
       [nil context]
-      [next-state (execute-triggers workflow current-state next-state context)])))
+      (let [context (execute-triggers workflow current-state next-state context)]
+       [next-state
+        (update-in
+         context
+         [:state-tracking next-state]
+         inc)]))))
 
 (defn is-final-state? [workflow state-name]
   (let [workflow (get-workflow workflow)]
@@ -236,30 +241,30 @@
     (throw (RuntimeException. "Error: invalid workflow (nil)!")))
   (let [workflow (get-workflow workflow)
         max (or (:max-transitions workflow) *default-max-global-transitions*)]
-   (loop [[prev-state prev-context] [current-state context]
-          [next-state next-context] (transition-once! workflow current-state context)
-          iterations max]
-     (printf "transition! transitioned %s => %s\n" prev-state next-state)
-     (pp/pprint next-context)
-     (cond
-       ;; we're done here, didn't transition
-       (nil? next-state)
-       [prev-state prev-context]
+    (loop [[prev-state prev-context] [current-state context]
+           [next-state next-context] (transition-once! workflow current-state context)
+           iterations max]
+      (printf "transition! transitioned %s => %s\n" prev-state next-state)
+      (pp/pprint next-context)
+      (cond
+        ;; we're done here, didn't transition
+        (nil? next-state)
+        [prev-state prev-context]
 
-       (= next-state prev-state)
-       [next-state next-context]
+        (= next-state prev-state)
+        [next-state next-context]
 
-       (is-final-state? workflow next-state)
-       [next-state next-context]
+        (is-final-state? workflow next-state)
+        [next-state next-context]
 
-       (zero? iterations)
-       (throw (RuntimeException. (format "Error: maximum number of iterations [%s] exceeded, aborting flow." max)))
+        (zero? iterations)
+        (throw (RuntimeException. (format "Error: maximum number of iterations [%s] exceeded, aborting flow." max)))
 
-       ;; keep trying to transition
-       :else
-       (recur [next-state next-context]
-              (transition-once! workflow next-state next-context)
-              (dec iterations))))))
+        ;; keep trying to transition
+        :else
+        (recur [next-state next-context]
+               (transition-once! workflow next-state next-context)
+               (dec iterations))))))
 
 (defn workflow-to-dot [workflow current-state]
   (let [workflow (get-workflow workflow)
@@ -310,7 +315,16 @@
   (let [workflow    (get-workflow    workflow)
         start-state (get-start-state workflow)
         state-info  (get (:states workflow) start-state)
-        triggers    (seqize-triggers (:on-entry state-info))]
+        triggers    (seqize-triggers (:on-entry state-info))
+        context     (merge
+                     {:state-tracking
+                      (reduce
+                       (fn [m state]
+                         (assoc m state 0))
+                       {}
+                       (keys (:states workflow)))}
+                     context)
+        context      (assoc-in context [:state-tracking start-state] 1)]
     (loop [[trigger & triggers] triggers
            context context]
       (printf "initialize-workflow: trigger=%s context=%s\n" trigger (with-out-str (pp/pprint context)))

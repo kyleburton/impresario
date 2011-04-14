@@ -8,19 +8,19 @@
   true)
 
 (def simple-workflow
-  {:name :simple-workflow
-   :states
-   {:first-state
-    {:start true
-     :transitions
-     [{:state :next-state
-       :if :impresario.test.core/transition-every-time}]}
-    :next-state
-    {:transitions
-     [{:state :final-state
-       :if :impresario.test.core/transition-every-time}]}
-    :final-state
-    {:transitions []}}})
+     {:name :simple-workflow
+      :states
+      {:first-state
+       {:start true
+        :transitions
+        [{:state :next-state
+          :if :impresario.test.core/transition-every-time}]}
+       :next-state
+       {:transitions
+        [{:state :final-state
+          :if :impresario.test.core/transition-every-time}]}
+       :final-state
+       {:transitions []}}})
 
 (register-workflow! :simple-workflow simple-workflow)
 
@@ -80,25 +80,25 @@
     :times-transitioned (inc (:times-transitioned context 0))))
 
 (def simple-workflow-with-triggers
-  {:name :simple-workflow-with-triggers
-   :on-transition :impresario.core/path-tracing-trigger
-   :states
-   {:first-state
-    {:start true
-     :on-entry :impresario.test.core/simple-workflow-entry-trigger
-     :transitions
-     [{:state :next-state
-       :if :impresario.test.core/transition-every-time
-       :on-transition :impresario.test.core/simple-workflow-transition-trigger}]}
-    :next-state
-    {:on-entry :impresario.test.core/simple-workflow-entry-trigger
-     :transitions
-     [{:state :final-state
-       :if :impresario.test.core/transition-every-time
-       :on-transition :impresario.test.core/simple-workflow-transition-trigger}]}
-    :final-state
-    {:stop true
-     :transitions []}}})
+     {:name :simple-workflow-with-triggers
+      :on-transition :impresario.core/path-tracing-trigger
+      :states
+      {:first-state
+       {:start true
+        :on-entry :impresario.test.core/simple-workflow-entry-trigger
+        :transitions
+        [{:state :next-state
+          :if :impresario.test.core/transition-every-time
+          :on-transition :impresario.test.core/simple-workflow-transition-trigger}]}
+       :next-state
+       {:on-entry :impresario.test.core/simple-workflow-entry-trigger
+        :transitions
+        [{:state :final-state
+          :if :impresario.test.core/transition-every-time
+          :on-transition :impresario.test.core/simple-workflow-transition-trigger}]}
+       :final-state
+       {:stop true
+        :transitions []}}})
 
 (register-workflow! :simple-workflow-with-triggers simple-workflow-with-triggers)
 
@@ -128,6 +128,11 @@
                                                     new-context)]
       (is (= :final-state @*last-trigger*)))))
 
+(comment
+  (test-triggers-transition-once)
+
+  )
+
 (deftest test-uuid-is-carried-forward
   (let [initial-context (initialize-workflow :simple-workflow-with-triggers {})
         uuid            (:uuid initial-context)
@@ -153,8 +158,8 @@
 
 ;; (test-triggers-transition-once)
 
-;
-; (run-all-tests)
+                                        ;
+                                        ; (run-all-tests)
 
 ;; (spit "examples/simple-workflow.dot" (workflow-to-dot simple-workflow-with-triggers :start))
 
@@ -236,5 +241,30 @@
 (comment
 
   (run-tests)
+
+  )
+
+
+(deftest test-state-entry-count-tracking
+  (let [workflow {:name :simple-counting-workflow
+                  :max-transitions 0
+                  :states
+                  {:first-state
+                   {:start true
+                    :transitions
+                    [{:state :final-state
+                      :if :impresario.test.core/transition-every-time}]}
+                   :final-state
+                   {:stop true
+                    :transitions []}}}
+        context (initialize-workflow workflow {})]
+    (is (= 1 (get-in context [:state-tracking :first-state])))
+    (is (= 0 (get-in context [:state-tracking :final-state])))
+    (let [context (transition! workflow :first-state context)]
+      (is (= 1 (get-in context [:state-tracking :final-state]))))))
+
+
+(comment
+  (test-state-entry-count-tracking)
 
 )
