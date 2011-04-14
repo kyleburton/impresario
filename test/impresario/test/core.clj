@@ -118,7 +118,7 @@
         (transition-once!
          :simple-workflow-with-triggers
          :first-state
-         {})]
+         (initialize-workflow :simple-workflow-with-triggers {}))]
     (printf "new-context:\n")
     (pp/pprint new-context)
     (is (= :next-state res-state))
@@ -186,24 +186,27 @@
          {}))))
 
 (deftest test-very-limited-max-transitions
-  (is (thrown-with-msg? RuntimeException #"Error: maximum number of iterations"
-        (transition!
-         {:name :simple-workflow-with-triggers
-          :max-transitions 0
-          :states
-          {:first-state
-           {:start true
-            :on-entry :impresario.test.core/simple-workflow-entry-trigger
-            :transitions
-            [{:state :final-state
-              :if :impresario.test.core/transition-every-time
-              :on-transition :impresario.test.core/simple-workflow-transition-trigger}]}
-           :final-state
-           {:on-entry :impresario.test.core/simple-workflow-entry-trigger
-            :transitions []}}}
-         :first-state
-         {}))))
+  (let [workflow {:name :simple-workflow-with-triggers
+           :max-transitions 0
+           :states
+           {:first-state
+            {:start true
+             :on-entry :impresario.test.core/simple-workflow-entry-trigger
+             :transitions
+             [{:state :final-state
+               :if :impresario.test.core/transition-every-time
+               :on-transition :impresario.test.core/simple-workflow-transition-trigger}]}
+            :final-state
+            {:on-entry :impresario.test.core/simple-workflow-entry-trigger
+             :transitions []}}}
+        context (initialize-workflow workflow {})]
+   (is (thrown-with-msg? RuntimeException #"Error: maximum number of iterations"
+         (transition!
+          workflow
+          :first-state
+          context)))))
 
+;; (test-very-limited-max-transitions)
 ;; (test-context-validator)
 
 (comment
@@ -260,7 +263,7 @@
         context (initialize-workflow workflow {})]
     (is (= 1 (get-in context [:state-tracking :first-state])))
     (is (= 0 (get-in context [:state-tracking :final-state])))
-    (let [context (transition! workflow :first-state context)]
+    (let [[next-state context] (transition! workflow :first-state context)]
       (is (= 1 (get-in context [:state-tracking :final-state]))))))
 
 

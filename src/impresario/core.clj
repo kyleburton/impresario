@@ -230,6 +230,7 @@
          [:state-tracking next-state]
          inc)]))))
 
+
 (defn is-final-state? [workflow state-name]
   (let [workflow (get-workflow workflow)]
     (get-in workflow [:states state-name :stop])))
