@@ -28,9 +28,9 @@
   (reduce
    (fn [attrs to-state-name]
      (let [transition?-name (symbol
-                            (format "transition-from-%s-to-%s?"
-                                    (name state-name)
-                                    (name to-state-name)))
+                             (format "transition-from-%s-to-%s?"
+                                     (name state-name)
+                                     (name to-state-name)))
            transition?-fn   (ns-resolve *ns* transition?-name)
            on-transition!-name
            (symbol
@@ -68,13 +68,48 @@
      [#(add-on-entry-trigger state-name %1)
       #(add-transitions      state-name %1)])))
 
-(defmacro defmachine [conversation-name & states]
-  (let [const-name (symbol (format "*%s*" (name conversation-name)))
-        states-map (reduce (fn [states-map state]
-                             (assoc states-map (second state)
-                                    state))
-                           {}
-                           states)]
+(defn- split-forms [pred forms]
+  (let [res (reduce (fn [m form]
+                      (update-in
+                       m
+                       [(pred form)]
+                       conj
+                       form))
+                    {}
+                    forms)]
+    [(vec (get res true))
+     (vec (get res false))]))
+
+(comment
+  (split-forms
+   #(and (seq? %1)
+         (= 'state (first %1)))
+   '[(state asdf)
+     (on-transition asdf)
+     (state fdsa)])
+
+  )
+
+(defn- select-forms [sym forms]
+  (split-forms #(and (seq? %1) (= sym (first %1)))
+               forms))
+
+(defn- get-global-on-transition []
+  (ns-resolve *ns* 'on-transition-any))
+
+(defmacro defmachine [conversation-name & forms]
+  (let [[states forms]   (select-forms 'state forms)
+        const-name       (symbol (format "*%s*" (name conversation-name)))
+        states           (if (map? (first states)) (next states) states)
+        states-map       (reduce (fn [states-map state]
+                                   (assoc states-map (second state)
+                                          state))
+                                 {}
+                                 states)]
+    (if (not (empty? forms))
+      (raise "Error: unreconigzed forms: %s" forms))
     `(def ~const-name
           {:name ~conversation-name
+           :on-transition ~(get-global-on-transition)
            :states ~states-map})))
+

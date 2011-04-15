@@ -342,3 +342,7 @@
       context
     :trace (conj (:trace context [])
                  [curr-state next-state])))
+
+(defn visited-state-more-than? [context state count]
+  (>= (get-in context [:state-tracking state]) count))
+
