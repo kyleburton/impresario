@@ -6,7 +6,8 @@
 (defn- keywordize-fn [f]
   (if (nil? f)
     nil
-    (keyword (format "%s/%s" (:ns   (meta f)) (:name (meta f))))))
+    (keyword (str (:ns   (meta f)))
+             (str (:name (meta f))))))
 
 (defn- add-on-entry-trigger [state-name attrs]
   (let [on-entry-trigger    (symbol (format "on-enter-%s" (name state-name)))
@@ -23,8 +24,6 @@
 
 ;; TODO: optionally look for a not-transition-from-X-to-Y?
 (defn- add-transitions [state-name attrs]
-  (printf "add-transitions: state-name:%s attrs:%s\n"
-          state-name attrs)
   (reduce
    (fn [attrs to-state-name]
      (let [transition?-name (symbol
@@ -44,12 +43,13 @@
                       {:state to-state-name
                        :if    (keywordize-fn transition?-fn)
                        :on-transition (keywordize-fn on-transition!-fn)}))
-         (raise "Error: no transition predicate defined for: %s to %s named %s in ns %s.  Try:\n(defn %s [workflow current-state context]\n  false)"
+         (raise "Error: no transition predicate defined for: %s to %s named %s in ns %s.  Try:\n(defpredicate %s %s\n  false)"
                 state-name
                 to-state-name
                 transition?-name
                 *ns*
-                transition?-name))))
+                state-name
+                to-state-name))))
    (assoc attrs :transitions [])
    (:transitions attrs)))
 
@@ -95,7 +95,7 @@
                forms))
 
 (defn- get-global-on-transition []
-  (ns-resolve *ns* 'on-transition-any))
+  (keywordize-fn (ns-resolve *ns* 'on-transition-any)))
 
 (defmacro defmachine [conversation-name & forms]
   (let [[states forms]   (select-forms 'state forms)
@@ -113,3 +113,50 @@
            :on-transition ~(get-global-on-transition)
            :states ~states-map})))
 
+
+(def *workflow* nil)
+(def *current-state* nil)
+(def *next-state* nil)
+(def *context* nil)
+
+(defmacro on-enter! [state-name & body]
+  (let [trigger-name (symbol (format "%s-%s" (name :on-enter) (name state-name)))]
+    `(defn ~trigger-name [workflow# current-state# next-state# context#]
+       (binding [*workflow*      workflow#
+                 *current-state* current-state#
+                 *next-state*    next-state#
+                 *context*       context#]
+         ~@body))))
+
+
+(defmacro on-transition! [from-state to-state & body]
+  (let [trigger-name (symbol (format "%s-from-%s-to-%s!"
+                     (name :on-transition)
+                     (name from-state)
+                     (name to-state)))]
+    `(defn ~trigger-name [workflow# current-state# next-state# context#]
+       (binding [*workflow*      workflow#
+                 *current-state* current-state#
+                 *next-state*    next-state#
+                 *context*       context#]
+         ~@body))))
+
+(defn- transition-predicate-name [from-state to-state]
+  (symbol (format "transition-from-%s-to-%s?" (name from-state) (name to-state))))
+
+(defmacro defpredicate [from-state to-state & body]
+  (let [pred-name (transition-predicate-name from-state to-state)]
+    `(defn ~pred-name [workflow# current-state# context#]
+       (binding [*workflow*      workflow#
+                 *current-state* current-state#
+                 *context*       context#]
+         ~@body))))
+
+(defmacro defpredicate-as [from-state to-state alias]
+  (let [pred-name (transition-predicate-name from-state to-state)]
+    `(def ~pred-name
+          (fn [workflow# current-state# context#]
+            (binding [*workflow*      workflow#
+                      *current-state* current-state#
+                      *context*       context#]
+              (~alias))))))
