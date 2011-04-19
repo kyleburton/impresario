@@ -56,12 +56,14 @@
 (defmacro state [state-name & [attrs]]
   (let [attrs (merge
                {:description (format "State: %s" state-name)
-                :start       false}
+                :start       false
+                :stop        false}
                (or attrs {}))]
     (reduce
      #(%2 %1)
      {:name        state-name
       :start       (:start attrs)
+      :stop        (:stop attrs)
       :description (:description attrs)
       :on-entry    (:on-entry attrs)
       :transitions (:transitions attrs)}

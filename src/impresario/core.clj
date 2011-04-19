@@ -253,7 +253,9 @@
         [prev-state prev-context]
 
         (= next-state prev-state)
-        [next-state next-context]
+        (do
+          (printf "impresario.core: next(%s)==prev(%s) self-transition?" next-state prev-state)
+          [next-state next-context])
 
         (is-final-state? workflow next-state)
         [next-state next-context]
