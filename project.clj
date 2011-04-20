@@ -1,4 +1,4 @@
-(defproject com.github.kyleburton/impresario "1.0.9-SNAPSHOT"
+(defproject com.github.kyleburton/impresario "1.0.9"
   :description "Impresario: Workflow for Clojure"
   :url         "http://github.com/kyleburton/impresario"
   :license {:name "Eclipse Public License - v 1.0"
