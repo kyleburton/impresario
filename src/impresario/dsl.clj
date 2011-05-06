@@ -128,7 +128,11 @@
                  *current-state* current-state#
                  *next-state*    next-state#
                  *context*       context#]
-         ~@body))))
+         (let [res# (do ~@body)]
+           (if-not (map? res#)
+             (raise "Error: on-enter! trigger [%s] did not return a map! Got [%s] instead."
+                    ~(str trigger-name) res#))
+           res#)))))
 
 
 (defmacro on-transition! [from-state to-state & body]
