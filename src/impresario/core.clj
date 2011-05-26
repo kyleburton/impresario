@@ -2,17 +2,12 @@
   (:require [clojure.contrib.pprint :as pp]))
 
 ;; TODO: validate 1 and only 1 start state
-;; TODO: add sentinal for :stop not just :start
-;; TODO: support a registry of workflows?
 ;; TODO: default context keys?  :start-time :current-time :history (?)
 
 ;; TODO: how to support a 'trace'?  a seq of all the states that were transitioned through and each version of the context at the time (before/after)
 ;; TODO: external triggers: timers, 'waking up' - also support a 'wake' trigger?
 ;; TODO: an exception state that any state can transition to on error?
 ;; TODO: support [global] error handler when a transition was expected but did not occurr?
-;; TODO: Support a [global] 'on-entry' for any state being entered?
-;; TODO: be more accomodating in the definition of predicate symbols: see if we can create a macro that allows us to gleam the namespace the workflow was defined in...
-
 
 (defonce *registered-workflows* (atom {}))
 
@@ -23,9 +18,6 @@
          assoc
          name
          (assoc definition :name name)))
-
-;; TODO: resolve/store off the *ns* predicates via the macro
-;; TODO: support :unless predicates
 
 (defmacro register-workflow! [name definition]
   ;; walk the tree, anywhere we have one of [:if :unless :on-entry
@@ -70,7 +62,7 @@
 (defn- get-transition-predicate-fn [transition-info]
   (let [if-pred     (:if transition-info)
         unless-pred (:unless transition-info)]
-    (printf "  get-transition-predicate-fn: %s\n" (with-out-str (pp/pprint transition-info)))
+    ;;(printf "  get-transition-predicate-fn: %s\n" (with-out-str (pp/pprint transition-info)))
     (cond
       (and if-pred unless-pred)
       (throw (RuntimeException. (format "Error: transition:'%s' has both an :if and an :unless!" transition-info)))
@@ -106,7 +98,7 @@
                                        transition-info
                                        context))
                                     transitions))]
-    (printf "  transition-once?: viable-next-states:%s\n" (with-out-str (pp/pprint (vec viable-next-states))))
+    ;;(printf "  transition-once?: viable-next-states:%s\n" (with-out-str (pp/pprint (vec viable-next-states))))
     (cond
       (= 1 (count viable-next-states))
       (:state (first viable-next-states))
@@ -145,11 +137,17 @@
 
 (defn on-exit-triggers [workflow state]
   (let [workflow (get-workflow workflow)]
-    (seqize-triggers (:on-exit (get (:states workflow) state)))))
+    (vec
+     (concat
+      (seqize-triggers (:on-exit workflow))
+      (seqize-triggers (:on-exit (get (:states workflow) state)))))))
 
 (defn on-entry-triggers [workflow state]
   (let [workflow (get-workflow workflow)]
-    (seqize-triggers (:on-entry (get (:states workflow) state)))))
+    (vec
+     (concat
+      (seqize-triggers (:on-enter workflow))
+      (seqize-triggers (:on-entry (get (:states workflow) state)))))))
 
 (defn get-transition-info [workflow current-state next-state]
   (let [workflow (get-workflow workflow)]
@@ -189,7 +187,7 @@
         f (resolve-keyword-to-fn trigger)]
     (if-not f
       (throw (RuntimeException. (format "Error: unable to resolve trigger (%s) to function!" trigger))))
-    (printf "     executing trigger: %s [%s => %s]\n" (name trigger) current-state next-state)
+    ;;(printf "     executing trigger: %s [%s => %s]\n" (name trigger) current-state next-state)
     (f workflow current-state next-state context)))
 
 (defn execute-triggers [workflow current-state next-state curr-context]
@@ -224,11 +222,11 @@
     (if-not next-state
       [nil context]
       (let [context (execute-triggers workflow current-state next-state context)]
-       [next-state
-        (update-in
-         context
-         [:state-tracking next-state]
-         inc)]))))
+        [next-state
+         (update-in
+          context
+          [:state-tracking next-state]
+          inc)]))))
 
 
 (defn is-final-state? [workflow state-name]
@@ -245,8 +243,8 @@
     (loop [[prev-state prev-context] [current-state context]
            [next-state next-context] (transition-once! workflow current-state context)
            iterations max]
-      (printf "transition! transitioned %s => %s\n" prev-state next-state)
-      (pp/pprint next-context)
+      ;;(printf "transition! transitioned %s => %s\n" prev-state next-state)
+      ;;(pp/pprint next-context)
       (cond
         ;; we're done here, didn't transition
         (nil? next-state)
@@ -254,7 +252,7 @@
 
         (= next-state prev-state)
         (do
-          (printf "impresario.core: next(%s)==prev(%s) self-transition?" next-state prev-state)
+          ;;(printf "impresario.core: next(%s)==prev(%s) self-transition?" next-state prev-state)
           [next-state next-context])
 
         (is-final-state? workflow next-state)
@@ -318,7 +316,7 @@
   (let [workflow    (get-workflow    workflow)
         start-state (get-start-state workflow)
         state-info  (get (:states workflow) start-state)
-        triggers    (seqize-triggers (:on-entry state-info))
+        triggers    (on-entry-triggers workflow start-state)
         context     (merge
                      {:state-tracking
                       (reduce
@@ -330,7 +328,7 @@
         context      (assoc-in context [:state-tracking start-state] 1)]
     (loop [[trigger & triggers] triggers
            context context]
-      (printf "initialize-workflow: trigger=%s context=%s\n" trigger (with-out-str (pp/pprint context)))
+      ;;(printf "initialize-workflow: trigger=%s context=%s\n" trigger (with-out-str (pp/pprint context)))
       (if trigger
         (recur triggers
                (execute-trigger trigger workflow nil start-state context))

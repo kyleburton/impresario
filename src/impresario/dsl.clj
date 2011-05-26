@@ -99,9 +99,15 @@
 (defn- get-global-on-transition []
   (keywordize-fn (ns-resolve *ns* 'on-transition-any)))
 
-(defmacro defmachine [conversation-name & forms]
+(defn- get-global-on-enter []
+  (keywordize-fn (ns-resolve *ns* 'on-enter-any)))
+
+(defn- get-global-on-exit []
+  (keywordize-fn (ns-resolve *ns* 'on-exit-any)))
+
+(defmacro defmachine [workflow-name & forms]
   (let [[states forms]   (select-forms 'state forms)
-        const-name       (symbol (format "*%s*" (name conversation-name)))
+        const-name       (symbol (format "*%s*" (name workflow-name)))
         states           (if (map? (first states)) (next states) states)
         states-map       (reduce (fn [states-map state]
                                    (assoc states-map (second state)
@@ -111,15 +117,42 @@
     (if (not (empty? forms))
       (raise "Error: unreconigzed forms: %s" forms))
     `(def ~const-name
-          {:name ~conversation-name
+          {:name ~workflow-name
            :on-transition ~(get-global-on-transition)
-           :states ~states-map})))
+           :states        ~states-map
+           :on-enter      ~(get-global-on-enter)
+           :on-exit       ~(get-global-on-exit)})))
 
 
 (def *workflow* nil)
 (def *current-state* nil)
 (def *next-state* nil)
 (def *context* nil)
+
+(defmacro on-enter-any! [& body]
+  `(defn ~'on-enter-any [workflow# current-state# next-state# context#]
+     (binding [*workflow*      workflow#
+               *current-state* current-state#
+               *next-state*    next-state#
+               *context*       context#]
+       (let [res# (do ~@body)]
+         (if-not (map? res#)
+           (raise "Error: on-enter-any! trigger did not return a map! Got [%s] instead."
+                  res#))
+         res#))))
+
+(defmacro on-exit-any! [& body]
+  `(defn ~'on-exit-any [workflow# current-state# next-state# context#]
+     (binding [*workflow*      workflow#
+               *current-state* current-state#
+               *next-state*    next-state#
+               *context*       context#]
+       (let [res# (do ~@body)]
+         (if-not (map? res#)
+           (raise "Error: on-exit-any! trigger did not return a map! Got [%s] instead."
+                  res#))
+         res#))))
+
 
 (defmacro on-enter! [state-name & body]
   (let [trigger-name (symbol (format "%s-%s" (name :on-enter) (name state-name)))]
@@ -137,9 +170,9 @@
 
 (defmacro on-transition! [from-state to-state & body]
   (let [trigger-name (symbol (format "%s-from-%s-to-%s!"
-                     (name :on-transition)
-                     (name from-state)
-                     (name to-state)))]
+                                     (name :on-transition)
+                                     (name from-state)
+                                     (name to-state)))]
     `(defn ~trigger-name [workflow# current-state# next-state# context#]
        (binding [*workflow*      workflow#
                  *current-state* current-state#
@@ -166,3 +199,4 @@
                       *current-state* current-state#
                       *context*       context#]
               (~alias))))))
+

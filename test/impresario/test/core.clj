@@ -119,8 +119,8 @@
          :simple-workflow-with-triggers
          :first-state
          (initialize-workflow :simple-workflow-with-triggers {}))]
-    (printf "new-context:\n")
-    (pp/pprint new-context)
+    ;;(printf "new-context:\n")
+    ;;(pp/pprint new-context)
     (is (= :next-state res-state))
     (is (= :next-state @*last-trigger*))
     (let [[res-state new-context] (transition-once! :simple-workflow-with-triggers
@@ -152,8 +152,9 @@
          :first-state
          initial-context)]
     (is (not (empty? (:trace new-context))))
-    (printf "THE FINAL CONTEXT:\n")
-    (pp/pprint new-context)))
+    ;;(printf "THE FINAL CONTEXT:\n")
+    ;;(pp/pprint new-context)
+    ))
 
 
 ;; (test-triggers-transition-once)
