@@ -12,7 +12,7 @@
                      ]
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.clojure/clojure-contrib "1.2.0"]
-                 [org.clojars.kyleburton/clj-etl-utils "1.0.32"]
+                 [org.clojars.kyleburton/clj-etl-utils "1.0.33"]
                  [log4j/log4j "1.2.14"]
   ]
   :autodoc {
