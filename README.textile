@@ -83,6 +83,10 @@ h4. WORKFLOW_INSTANCES
 
 h1. Future Work
 
+h3. Workflow Versioning
+
+Introduce a second form of register-workfow that accepts a version.  Make the defult (when unspecified) "1.0.0".
+
 h3. global exception state
 
 A declared state, with possible transition's out, but no explicit edges leading in.  If any predicate or trigger throws an exception, this state is entered.  This gives the exception state the ability to handle errors and transition to one of the other states - or abort the workflow completely (by re-raising the exception).
