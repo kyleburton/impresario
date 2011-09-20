@@ -1,5 +1,6 @@
 (ns impresario.test.workflow-tracking
-  (:require [clojure.contrib.pprint :as pp]
+  (:require
+   [clojure.contrib.pprint :as pp]
             impresario.test.door-workflow)
   (:use
    impresario.core

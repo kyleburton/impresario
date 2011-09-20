@@ -1,4 +1,6 @@
 (ns impresario.dsl
+  (:require
+   [impresario.core :as wf])
   (:use
    [clj-etl-utils.lang-utils :only [raise]]))
 
@@ -187,6 +189,9 @@
                *next-state*    next-state#
                *context*       context#]
        ~@body)))
+
+(defmacro register! [workflow-name]
+  `(wf/register-workflow! ~workflow-name ~(symbol (format "*%s*" (name workflow-name)))))
 
 (defn- transition-predicate-name [from-state to-state]
   (symbol (format "transition-from-%s-to-%s?" (name from-state) (name to-state))))
