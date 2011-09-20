@@ -1,6 +1,43 @@
 h1. Impresario
 
-A light weight workflow, or state machine library in Clojure.
+A light-weight workflow (state machine) library in Clojure.
+
+h1. Installation
+
+h3. "Leiningen":https://github.com/technomancy/leiningen
+
+pre.   [com.github.kyleburton/impresario "1.0.10"]
+
+h3. Maven
+
+pre. <dependency>
+  <groupId>com.github.kyleburton</groupId>
+  <artifactId>impresario</artifactId>
+  <version>1.0.10</version>
+</dependency>
+
+
+h1. Example
+
+<pre>
+(ns foo
+  (:use 
+    impresario.dsl))
+
+(defmachine :door-lifecycle
+  (state :locked
+    {:start true
+     :transitions-to [:closed]})
+  (state :closed
+    {:transitions-to [:open :locked]})
+  (state :open 
+    {:transitions-to [:closed]}))
+
+</pre>
+
+h1. Interactive Development with Emacs and SLIME
+
+Start with the defmachine, add a state and any transitions.  Do this 1 at a time and eval the buffer.  Impresario's DSL will throw an exception for any missing transition predicates - alerting you to which ones are missing.
 
 h1. What is a Workflow?
 
