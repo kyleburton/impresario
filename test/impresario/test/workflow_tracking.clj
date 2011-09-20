@@ -1,50 +1,10 @@
 (ns impresario.test.workflow-tracking
-  (:require [clojure.contrib.pprint :as pp])
-  (:use [impresario.core] :reload)
-  (:use impresario.dsl)
-  (:use [clojure.test]))
+  (:require [clojure.contrib.pprint :as pp]
+            impresario.test.door-workflow)
+  (:use
+   impresario.core
+   [clojure.test]))
 
-(on-enter! :start
-  (assoc *context* :transitions []))
-
-(defpredicate :start :closed
-  true)
-
-(defpredicate :open :closed
-  (get *context* :close-door))
-
-(defpredicate :closed :locked
-  (get *context* :lock-door))
-
-(on-enter! :locked
-  (assoc *context* :locked? true))
-
-(defpredicate :closed :open
-  (and
-   (not (get *context* :locked?))
-   (not (get *context* :lock-door))))
-
-(defpredicate :locked :closed
-  (get *context* :locked?))
-
-(on-transition! :locked :closed
-  (dissoc *context* :locked?))
-
-(on-transition-any!
-  (update-in
-   (dissoc *context* :close-door :lock-door :unlock-door)
-   [:transitions]
-   conj
-   [*current-state* :=> *next-state*]))
-
-(defmachine :door-workflow
-  (state :start {:start true :transitions [:closed]})
-  (state :closed {:transitions [:locked
-                                :open]})
-  (state :locked {:transitions [:closed]})
-  (state :open   {:transitions [:closed]}))
-
-(register-workflow :door-workflow *door-workflow*)
 
 ;; Fix for Issue: "State Tracking Bug: Serialized Contexts and Newly Added States"
 (deftest state-tracking-is-robust-if-new-states-are-encountered
