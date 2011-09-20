@@ -16,14 +16,27 @@
 (defonce *registered-workflows* (atom {}))
 
 (defn validate-workflow [wf-name definition]
-  ;; enure all transition to's reach defined states
+  ;; ensure all transition to's reach defined states
   ;; check if there are any unreachable states (that are not mentioned in a :transition)
   (let [errors       (atom [])
         valid-states (reduce
                       #(conj %1 %2)
                       #{}
-                      (keys (:states definition)))]
+                      (keys (:states definition)))
+        can-be-reached? (reduce
+                         (fn [m [from to]]
+                           (assoc m to true))
+                         {}
+                         (for [from (keys (:states definition))
+                               to   (map :state (get-in definition [:states from :transitions]))]
+                           [from to]))]
     (doseq [st (keys (:states definition))]
+      (if (and (not  (:start (get-in definition [:states st])))
+               (not (can-be-reached? st)))
+        (swap! errors conj
+               {:type :unreachable-state
+                :state st
+                :msg (format "Error: the state %s can not be reached in workflow %s" st wf-name)}))
       (doseq [tr (map :state (get-in definition [:states st :transitions]))]
         (if-not (contains? valid-states tr)
           (swap! errors conj
@@ -38,16 +51,8 @@
       (raise (format "Workflow[%s] had valiaiton erros: %s\n"
                      wf-name
                      (join "\n"
-                           (map :msg @errors)))))))
-
-
-(comment
-
-  (:start (:states (get-workflow :undefined-states)))
-
-  (validate-workflow :undefined-states (get-workflow :undefined-states))
-
-  )
+                           (map :msg @errors)))))
+    true))
 
 (defn register-workflow [name definition]
   (validate-workflow name definition)

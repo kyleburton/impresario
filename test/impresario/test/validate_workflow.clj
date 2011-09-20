@@ -17,6 +17,8 @@
 
 (deftest raise-on-register-invalid-flow
   (is (thrown-with-msg? RuntimeException #"Error: :start declares a transition to :nowhere"
+        (register! :undefined-states)))
+  (is (thrown-with-msg? RuntimeException #"the state :final can not be reached"
         (register! :undefined-states))))
 
 (comment
