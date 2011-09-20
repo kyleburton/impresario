@@ -2,6 +2,147 @@ h1. Impresario
 
 A light-weight workflow (state machine) library in Clojure.
 
+h1. Overview
+
+Impresario is a workflow system - mostly like a finite state machine, with the
+exception that an Impresario flow may transition through multiple nodes if the
+predicates defined in the flow allow for it.
+
+Impresario flows are implemented as a map that defines the states, transitions,
+predicates that determine if those transitions should be followed and call back
+handlers which may be attached to specific events.
+
+Workflow state is maintained in a map: the context.  The context is availalbe
+to all of the predicates and triggers.  Just as with many of the Clojure
+data strucutres, the context is immutable.  
+
+Predicates may access the context, but are unable to modify it.  Triggers must
+return the context - which allows for modification by triggers.
+
+Workflows once defined must be registered with Impresario in order to be used.
+When a workflow is registered, it is validated to ensure that: each state
+configured as the target of a transition exists; and each state in the flow is
+reachable (a state marked as a start state does not need to be reachable).
+
+An Impresario flow must have a start state (marked with a @:start true@).
+The @on-enter!@ trigger for the :start state can be used to initialize 
+the workflow's context.
+
+h2. DSL
+
+To make the process of defining the flows simpler, a DSL has been created.  This 
+is an example (from the unit tests) of a workflow that simulates a door.  The door
+may be open or closed, and if the door is closed it may be locked.  If the door 
+is locked, it can not be opened.  
+
+<pre>
+(ns impresario.test.door-workflow
+  (:use
+   impresario.dsl
+   impresario.core))
+
+(on-enter! :start
+  (assoc *context* :transitions []))
+
+(defpredicate :start :closed
+  true)
+
+(defpredicate :open :closed
+  (get *context* :close-door))
+
+(defpredicate :closed :locked
+  (get *context* :lock-door))
+
+(on-enter! :locked
+  (assoc *context* :locked? true))
+
+(defpredicate :closed :open
+  (and
+   (not (get *context* :locked?))
+   (not (get *context* :lock-door))))
+
+(defpredicate :locked :closed
+  (get *context* :locked?))
+
+(on-transition! :locked :closed
+  (dissoc *context* :locked?))
+
+(on-transition-any!
+  (update-in
+   (dissoc *context* :close-door :lock-door :unlock-door)
+   [:transitions]
+   conj
+   [*current-state* :=> *next-state*]))
+
+(defmachine :door-workflow
+  (state :start {:start true :transitions [:closed]})
+  (state :closed {:transitions [:locked
+                                :open]})
+  (state :locked {:transitions [:closed]})
+  (state :open   {:transitions [:closed]}))
+
+(register-workflow :door-workflow *door-workflow*)
+
+</pre>
+
+h3. Bindings
+
+Impresario makes use of several bindings to allow handlers
+to not have to take a long list of parameters.  The
+available bindings within a predicate or handler are:
+
+* *workflow* - the definition of the workflow
+* *current-state* - the current state
+* *next-state* - the subsequen state (if transitioning)
+* *context* - the context
+
+h3. @defmachine@
+
+This is used to define the workflow.  It must be given a
+keyword which names the workflow.  States are defined
+within the @defmachine@ form.
+
+States are declared with the @state@ form.  They must have a name
+and a map of properties.  The properties may contain: @:start@, @:transitions@ or @:stop@.  @:start@ indicates that the state is a start state, where the workflow may be entered.  @:stop@ indicates that the state is terminal, and if reached the workflow should no longer transition.
+
+NB: @defmachine@ will create a package level var with the name of your
+worklfow.  In the example above it creates @*door-workflow*@.  This var contains the definition of your workflow.
+
+To support interactive development, if you type in a @defmachine@ and attempt to evalutate it without defining the required predicates, Impresario will include a simple template for the predicate as part of the error message so that you may cut and paste it into your editor as a baseline.
+
+h3. @register-workflow@
+
+This funtion adds your workflow into the Impresario registry.  It takes the name of the workflow (as a keyword) and the workflow definition.  
+
+h3. @defpredicate@
+
+This is used to define a function in your package that will act as a transition predicate between two states.
+
+h3. @on-enter-any!@
+
+This declares a trigger that is fired any time a state is entered. Note that the body of this handler must return the context.
+
+h3. @on-enter!@
+
+Given a state name and a body, this will be the handler called
+when the workflow transitions into the given state.
+
+h3. @on-exit!@
+
+Given a state name and a body, this will be the handler called
+when the workflow transitions out of the given state.
+
+h3. @on-transition-any!@
+
+The body of this form will be called any time any transition
+is made. @*current-state@ and @*next-state*@ will be set
+to the names of the states involved in the transition.
+
+h3. @on-transition!@
+
+Given a from state, a to state and a body, will invoke the body
+whenever the specified edge is followed in the workflow.
+
 h1. Installation
 
 h3. "Leiningen":https://github.com/technomancy/leiningen
@@ -17,112 +158,11 @@ pre. <dependency>
 </dependency>
 
 
-h1. Example
-
-<pre>
-(ns foo
-  (:use 
-    impresario.dsl))
-
-(defmachine :door-lifecycle
-  (state :locked
-    {:start true
-     :transitions-to [:closed]})
-  (state :closed
-    {:transitions-to [:open :locked]})
-  (state :open 
-    {:transitions-to [:closed]}))
-
-</pre>
-
-h1. Interactive Development with Emacs and SLIME
-
-Start with the defmachine, add a state and any transitions.  Do this 1 at a time and eval the buffer.  Impresario's DSL will throw an exception for any missing transition predicates - alerting you to which ones are missing.
-
-h1. What is a Workflow?
-
-There are many implementations of workflow systems in many languages.  There are even standard workflow definitions and systmes (BPEL, XPDL).  This implementation takes inspiration from those implementations.  Impresario is not attempting to be any of those.  I needed to model a conversation with a 'bot' and needed a simple, light weight workflow system that was easy for me to use, easy to serialize and followed the lead of Clojure's immutable data structures.
-
-Impresario workflows are state machines.  Workflows declare a graph with nodes (states), vertexes (transitions), and observers of those nodes and vertexes (trigger conditions).  Workflows are implemented as an immutable Clojure map.  Current state is modeled as a keyword.  The context, or state, for the workflow is also modeled as an immutable map (the default).
-
-A workflow may have one and only one start state (maked with @:start@).  Terminal states must be marked with a @:stop@.
-
-!https://github.com/kyleburton/impresario/raw/master/examples/simple-workflow.dot.png!
-
-
-<pre class="code">
-{:name :simple-workflow
-   :states
-   {:first-state
-    {:start true
-     :transitions
-     [{:state :next-state
-       :if :impresario.test.core/transition-every-time}]}
-    :next-state
-    {:transitions
-     [{:state :final-state
-       :if :impresario.test.core/transition-every-time}]}
-    :final-state
-    {:transitions []}}}
-</pre>
-
-h1. Transitioning Between States and Context
-
-Transition predicates (@:if@ and @:unless@) are used to determine if, from a given state with a given context a specific edge can be followed.  These predicates are given access to the context, and should not modify it - only to return true or false indicating if the edge should be followed.
-
-You can test the workflow to see if a transition would take place by invoking @transition-once?@ to see if at least 1 transition can be made, or @transition?@ to see how far the workflow would transition with a given context.  Note that this may not be the same path taken during action transitioning as the trigger functions are there specifically so the context can be modified.  Doing so may alter the path identified by the predicate functions.  In practice, this is up to the implementor of the workflow to decited how they want their predicates and triggers to interact.
-
-h1. Triggers
-
-Triggers are executed when @transition-once!@ and @transition!@ are used to step the workflow forward.  Triggers return the new context, and thus have the ability to return a new context (derived from the previous context).
-
-There are a few supported types of triggers:
-
-* a single trigger for on _any_ transition
-* on entry into a specific state
-* when a specific edge is followed
-* on exit from a specific state
-
-Triggers must be declared within the workflow as Clojure keywords, triggers may be a single keyword or a seq of keywords.   When a transition is taking place, the 'exit' triggers are invoked first - indicating that the previous state is being left.   The transition's triggers are then executed, followed by the 'on enter' triggers for the new state.
-
-Each of these triggers must return the state that will be passed to the next trigger, as well as be returned from the transition function.
-
-h2. Global @:on-transition@
-
-A workflow wide @:on-transition@ trigger may be declared.  This observer is executed after the on-exit triggers have been fired for a state, but before any edge specific on-transition triggers are invoked.
-
-h2. External Triggers
-
-_unfinished section_
-
-Waking up a workflow.  External actors make trigger or awaken a workflow providing new state information for the workflow so that it may make another transition.
-
-h2. Serialiation
-
-h3. Recommended Data Model
-
-Two tables:
-
-h4. WORKFLOW_DEFINITIONS
-
-  id integer
-  name varchar(255)
-  version interter
-  definition text
-
-h4. WORKFLOW_INSTANCES
-
-  id integer
-  workflow_id integer fk to workflow_definitions
-  internal_state text
-  external_state text
-
-
-h1. Future Work
+h1. Future Direction
 
 h3. Workflow Versioning
 
-Introduce a second form of register-workfow that accepts a version.  Make the defult (when unspecified) "1.0.0".
+Introduce a second form of register-workflow that accepts a version.  Make the default (when unspecified) "1.0.0".
 
 h3. global exception state
 
