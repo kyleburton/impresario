@@ -230,7 +230,9 @@
          (update-in
           context
           [:state-tracking next-state]
-          inc)]))))
+          #(if (nil? %1)
+             1
+             (inc %1)))]))))
 
 
 (defn is-final-state? [workflow state-name]
