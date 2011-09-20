@@ -161,7 +161,7 @@
                                current-state)))))
 
 (defn on-transition-triggers [workflow current-state next-state]
-  (let [workflow (get-workflow workflow)
+  (let [workflow   (get-workflow workflow)
         state-info (get-transition-info workflow current-state next-state)]
     (cond
       (empty? state-info)

@@ -97,7 +97,7 @@
                forms))
 
 (defn- get-global-on-transition []
-  (keywordize-fn (ns-resolve *ns* 'on-transition-any)))
+  (keywordize-fn (ns-resolve *ns* 'on-transition-any-fn!)))
 
 (defn- get-global-on-enter []
   (keywordize-fn (ns-resolve *ns* 'on-enter-any)))
@@ -179,6 +179,14 @@
                  *next-state*    next-state#
                  *context*       context#]
          ~@body))))
+
+(defmacro on-transition-any! [& body]
+  `(defn ~'on-transition-any-fn! [workflow# current-state# next-state# context#]
+     (binding [*workflow*      workflow#
+               *current-state* current-state#
+               *next-state*    next-state#
+               *context*       context#]
+       ~@body)))
 
 (defn- transition-predicate-name [from-state to-state]
   (symbol (format "transition-from-%s-to-%s?" (name from-state) (name to-state))))
