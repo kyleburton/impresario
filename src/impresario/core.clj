@@ -360,11 +360,12 @@
         state-info  (get (:states workflow) start-state)
         triggers    (on-entry-triggers workflow start-state)
         context     (merge
+                     {:uuid (str (java.util.UUID/randomUUID))}
                      {:state-tracking
                       (reduce
                        (fn [m state]
                          (assoc m state 0))
-                       {:uuid (str (java.util.UUID/randomUUID))}
+                       {}
                        (keys (:states workflow)))}
                      context)
         context      (assoc-in context [:state-tracking start-state] 1)]
