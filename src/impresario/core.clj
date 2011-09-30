@@ -364,7 +364,7 @@
                       (reduce
                        (fn [m state]
                          (assoc m state 0))
-                       {}
+                       {:uuid (str (java.util.UUID/randomUUID))}
                        (keys (:states workflow)))}
                      context)
         context      (assoc-in context [:state-tracking start-state] 1)]
@@ -373,10 +373,7 @@
       (if trigger
         (recur triggers
                (execute-trigger trigger workflow nil start-state context))
-        (assoc
-            context
-          :uuid (str (java.util.UUID/randomUUID)))))))
-
+        context))))
 
 (defn path-tracing-trigger [workflow curr-state next-state context]
   (assoc
