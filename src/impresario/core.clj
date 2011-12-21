@@ -63,10 +63,11 @@
          name
          (assoc definition :name name)))
 
-(defmacro register-workflow! [name definition]
-  ;; walk the tree, anywhere we have one of [:if :unless :on-entry
-  ;; :on-exit, :on-transition] do the ns resolution
-  `(register-workflow ~name ~definition))
+(defmacro register-workflow!
+  ([the-name]
+     `(register-workflow! ~the-name (var-get (ns-resolve ~*ns* (symbol (str "*" (name ~the-name) "*"))))))
+  ([the-name definition]
+     `(register-workflow ~the-name ~definition)))
 
 (defn lookup-workflow [wf-name]
   (let [wf (get @*registered-workflows* wf-name)]
