@@ -9,11 +9,10 @@
   ; :warn-on-reflection true
   :dev-dependencies [[swank-clojure "1.4.0-SNAPSHOT"]
                      ;;[autodoc "0.7.1"]
+                 [org.clojars.kyleburton/clj-etl-utils "1.0.41"]
                      ]
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.clojure/clojure-contrib "1.2.0"]
-                 [org.clojars.kyleburton/clj-etl-utils "1.0.41"]
-                 [log4j/log4j "1.2.14"]
   ]
   :autodoc {
     :name "Impresario"

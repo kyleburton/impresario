@@ -1,8 +1,6 @@
 (ns impresario.dsl
   (:require
-   [impresario.core :as wf])
-  (:use
-   [clj-etl-utils.lang-utils :only [raise]]))
+   [impresario.core :as wf]))
 
 
 (defn- keywordize-fn [f]
@@ -45,13 +43,14 @@
                       {:state to-state-name
                        :if    (keywordize-fn transition?-fn)
                        :on-transition (keywordize-fn on-transition!-fn)}))
-         (raise "Error: no transition predicate defined for: %s to %s named %s in ns %s.  Try:\n(defpredicate %s %s\n  false)"
-                state-name
-                to-state-name
-                transition?-name
-                *ns*
-                state-name
-                to-state-name))))
+         (throw (RuntimeException.
+                 (format "Error: no transition predicate defined for: %s to %s named %s in ns %s.  Try:\n(defpredicate %s %s\n  false)"
+                         state-name
+                         to-state-name
+                         transition?-name
+                         *ns*
+                         state-name
+                         to-state-name))))))
    (assoc attrs :transitions [])
    (:transitions attrs)))
 
@@ -117,7 +116,7 @@
                                  {}
                                  states)]
     (if (not (empty? forms))
-      (raise "Error: unreconigzed forms: %s" forms))
+      (throw (RuntimeException. (format "Error: unreconigzed forms: %s" forms))))
     `(def ~const-name
           {:name ~workflow-name
            :on-transition ~(get-global-on-transition)
@@ -139,8 +138,8 @@
                *context*       context#]
        (let [res# (do ~@body)]
          (if-not (map? res#)
-           (raise "Error: on-enter-any! trigger did not return a map! Got [%s] instead."
-                  res#))
+           (throw (RuntimeException. (format "Error: on-enter-any! trigger did not return a map! Got [%s] instead."
+                                             res#))))
          res#))))
 
 (defmacro on-exit-any! [& body]
@@ -151,8 +150,8 @@
                *context*       context#]
        (let [res# (do ~@body)]
          (if-not (map? res#)
-           (raise "Error: on-exit-any! trigger did not return a map! Got [%s] instead."
-                  res#))
+           (throw (RuntimeException. (format "Error: on-exit-any! trigger did not return a map! Got [%s] instead."
+                          res#))))
          res#))))
 
 
@@ -165,8 +164,8 @@
                  *context*       context#]
          (let [res# (do ~@body)]
            (if-not (map? res#)
-             (raise "Error: on-enter! trigger [%s] did not return a map! Got [%s] instead."
-                    ~(str trigger-name) res#))
+             (throw (RuntimeException. (format "Error: on-enter! trigger [%s] did not return a map! Got [%s] instead."
+                            ~(str trigger-name) res#))))
            res#)))))
 
 
