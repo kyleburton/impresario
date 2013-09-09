@@ -2,8 +2,7 @@
   (:use
    impresario.core
    impresario.dsl
-   [clojure.test]
-   [clj-etl-utils.lang-utils :only [raise]]))
+   [clojure.test]))
 
 (defpredicate :start :nowhere
   true)

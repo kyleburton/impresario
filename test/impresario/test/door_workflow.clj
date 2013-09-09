@@ -1,8 +1,7 @@
 (ns impresario.test.door-workflow
   (:use
    impresario.dsl
-   impresario.core
-   [clj-etl-utils.lang-utils :only [raise]]))
+   impresario.core))
 
 (on-enter! :start
   (assoc *context* :transitions []))
