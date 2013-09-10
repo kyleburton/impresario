@@ -1,7 +1,6 @@
 (ns impresario.test.workflow-tracking
   (:require
-   [clojure.contrib.pprint :as pp]
-            impresario.test.door-workflow)
+   impresario.test.door-workflow)
   (:use
    impresario.core
    [clojure.test]))
@@ -36,4 +35,3 @@
 
         ]
     [curr-state context]))
-

@@ -108,7 +108,7 @@
 
 (defmacro defmachine [workflow-name & forms]
   (let [[states forms]   (select-forms 'state forms)
-        const-name       (symbol (format "*%s*" (name workflow-name)))
+        const-name       (symbol (format "%s" (name workflow-name)))
         states           (if (map? (first states)) (next states) states)
         states-map       (reduce (fn [states-map state]
                                    (assoc states-map (second state)
@@ -125,10 +125,10 @@
            :on-exit       ~(get-global-on-exit)})))
 
 
-(def *workflow* nil)
-(def *current-state* nil)
-(def *next-state* nil)
-(def *context* nil)
+(def ^{:dynamic true} *workflow* nil)
+(def ^{:dynamic true} *current-state* nil)
+(def ^{:dynamic true} *next-state* nil)
+(def ^{:dynamic true} *context* nil)
 
 (defmacro on-enter-any! [& body]
   `(defn ~'on-enter-any [workflow# current-state# next-state# context#]
@@ -138,8 +138,8 @@
                *context*       context#]
        (let [res# (do ~@body)]
          (if-not (map? res#)
-           (throw (RuntimeException. (format "Error: on-enter-any! trigger did not return a map! Got [%s] instead."
-                                             res#))))
+           (throw (RuntimeException. (format  "Error: on-enter-any! trigger did not return a map! Got [%s] instead."
+                  res#))))
          res#))))
 
 (defmacro on-exit-any! [& body]
@@ -151,7 +151,7 @@
        (let [res# (do ~@body)]
          (if-not (map? res#)
            (throw (RuntimeException. (format "Error: on-exit-any! trigger did not return a map! Got [%s] instead."
-                          res#))))
+                  res#))))
          res#))))
 
 
@@ -190,7 +190,7 @@
        ~@body)))
 
 (defmacro register! [workflow-name]
-  `(wf/register-workflow! ~workflow-name ~(symbol (format "*%s*" (name workflow-name)))))
+  `(wf/register-workflow! ~workflow-name ~(symbol (format "%s" (name workflow-name)))))
 
 (defn- transition-predicate-name [from-state to-state]
   (symbol (format "transition-from-%s-to-%s?" (name from-state) (name to-state))))
@@ -211,4 +211,3 @@
                       *current-state* current-state#
                       *context*       context#]
               (~alias))))))
-

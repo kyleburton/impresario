@@ -1,6 +1,6 @@
 (ns impresario.core
   (:require
-   [clojure.contrib.pprint :as pp])
+   [clojure.pprint :as pp])
   (:use
    [clojure.string :only [join]]))
 
@@ -12,7 +12,7 @@
 ;; TODO: an exception state that any state can transition to on error?
 ;; TODO: support [global] error handler when a transition was expected but did not occurr?
 
-(defonce *registered-workflows* (atom {}))
+(defonce registered-workflows (atom {}))
 
 (defn validate-workflow [wf-name definition]
   ;; ensure all transition to's reach defined states
@@ -57,19 +57,19 @@
   (validate-workflow name definition)
   (if-not (keyword? name)
     (throw (RuntimeException. (format "workflow name [%s] must be a keyword, it was: %s" name (class name)))))
-  (swap! *registered-workflows*
+  (swap! registered-workflows
          assoc
          name
          (assoc definition :name name)))
 
 (defmacro register-workflow!
   ([the-name]
-     `(register-workflow! ~the-name (var-get (ns-resolve ~*ns* (symbol (str "*" (name ~the-name) "*"))))))
+     `(register-workflow! ~the-name (var-get (ns-resolve ~*ns* (symbol (name ~the-name))))))
   ([the-name definition]
      `(register-workflow ~the-name ~definition)))
 
 (defn lookup-workflow [wf-name]
-  (let [wf (get @*registered-workflows* wf-name)]
+  (let [wf (get @registered-workflows wf-name)]
     (if-not wf
       (throw (RuntimeException. (format "Error: no registered workflow named %s -- did you call:\n\n  (register-workflow %s *%s*)\n" wf-name wf-name (name wf-name)))))
     wf))
@@ -278,13 +278,13 @@
   (let [workflow (get-workflow workflow)]
     (get-in workflow [:states state-name :stop])))
 
-(def *default-max-global-transitions* 100)
+(def default-max-global-transitions 100)
 
 (defn transition! [workflow current-state context]
   (if (nil? workflow)
     (throw (RuntimeException. "Error: invalid workflow (nil)!")))
   (let [workflow (get-workflow workflow)
-        max (or (:max-transitions workflow) *default-max-global-transitions*)]
+        max (or (:max-transitions workflow) default-max-global-transitions)]
     (loop [[prev-state prev-context] [current-state context]
            [next-state next-context] (transition-once! workflow current-state context)
            iterations max]
@@ -387,4 +387,3 @@
 
 (defn exceeded-max-visits? [context state count]
   (> (get-in context [:state-tracking state]) count))
-
