@@ -1,5 +1,4 @@
 (ns impresario.test.dsl
-  (:require [clojure.contrib.pprint :as pp])
   (:use [impresario.core] :reload)
   (:use
    clojure.test

@@ -1,5 +1,5 @@
 (ns impresario.test.core
-  (:require [clojure.contrib.pprint :as pp])
+  (:require [clojure.pprint :as pp])
   (:use [impresario.core] :reload)
   (:use [clojure.test]))
 

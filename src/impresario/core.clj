@@ -1,6 +1,6 @@
 (ns impresario.core
   (:require
-   [clojure.contrib.pprint :as pp])
+   [clojure.pprint :as pp])
   (:use
    [clojure.string :only [join]]))
 
