@@ -1,4 +1,4 @@
-(defproject com.github.kyleburton/impresario "1.0.12"
+(defproject com.github.kyleburton/impresario "1.0.13-SNAPSHOT"
   :description "Impresario: Workflow for Clojure"
   :url         "http://github.com/kyleburton/impresario"
   :lein-release {:deploy-via :clojars}
