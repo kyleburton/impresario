@@ -147,14 +147,14 @@ h1. Installation
 
 h3. "Leiningen":https://github.com/technomancy/leiningen
 
-pre.   [com.github.kyleburton/impresario "1.0.10"]
+pre.   [com.github.kyleburton/impresario "1.0.12"]
 
 h3. Maven
 
 pre. <dependency>
   <groupId>com.github.kyleburton</groupId>
   <artifactId>impresario</artifactId>
-  <version>1.0.10</version>
+  <version>1.0.12</version>
 </dependency>
 
 
