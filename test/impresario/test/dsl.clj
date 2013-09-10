@@ -24,7 +24,7 @@
                  :transitions [:done]})
   (state :done {:stop true}))
 
-(register-workflow :dsl-test *dsl-test*)
+(register-workflow :dsl-test dsl-test)
 
 (deftest test-global-on-enter-and-exit
   (let [context (initialize-workflow :dsl-test  {:on-enter 0 :on-exit 0})

@@ -66,15 +66,15 @@
 ;; (test-error-on-multiple-vaible-states)
 
 ;; support triggers
-(def *last-trigger* (atom nil))
+(def last-trigger (atom nil))
 
 (defn simple-workflow-entry-trigger [workflow curr-state next-state context]
-  (reset! *last-trigger* next-state)
+  (reset! last-trigger next-state)
   (assoc context
     :times-entered (inc (:times-entered context 0))))
 
 (defn simple-workflow-transition-trigger [workflow curr-state next-state context]
-  (reset! *last-trigger* next-state)
+  (reset! last-trigger next-state)
   (assoc context
     :transitions (conj (:transitions context []) [curr-state next-state])
     :times-transitioned (inc (:times-transitioned context 0))))
@@ -102,14 +102,14 @@
 
 (register-workflow! :simple-workflow-with-triggers simple-workflow-with-triggers)
 
-;; *last-trigger*
+;; last-trigger
 ;; (on-exit-triggers simple-workflow-with-triggers :first-state)
 ;; (on-entry-triggers simple-workflow-with-triggers :first-state)
 ;; (on-transition-triggers simple-workflow-with-triggers :first-state :next-state)
 
 (deftest test-initialize-workflow
   (initialize-workflow :simple-workflow-with-triggers {})
-  (is (= :first-state @*last-trigger*)))
+  (is (= :first-state @last-trigger)))
 
 ;; (test-initialize-workflow)
 
@@ -122,11 +122,11 @@
     ;;(printf "new-context:\n")
     ;;(pp/pprint new-context)
     (is (= :next-state res-state))
-    (is (= :next-state @*last-trigger*))
+    (is (= :next-state @last-trigger))
     (let [[res-state new-context] (transition-once! :simple-workflow-with-triggers
                                                     res-state
                                                     new-context)]
-      (is (= :final-state @*last-trigger*)))))
+      (is (= :final-state @last-trigger)))))
 
 (comment
   (test-triggers-transition-once)

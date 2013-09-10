@@ -43,4 +43,4 @@
   (state :locked {:transitions [:closed]})
   (state :open   {:transitions [:closed]}))
 
-(register-workflow :door-workflow *door-workflow*)
+(register-workflow :door-workflow door-workflow)
