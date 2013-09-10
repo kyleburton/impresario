@@ -2,7 +2,6 @@
   (:require
    [clojure.contrib.pprint :as pp])
   (:use
-   [clj-etl-utils.lang-utils :only [raise]]
    [clojure.string :only [join]]))
 
 ;; TODO: validate 1 and only 1 start state
@@ -48,10 +47,10 @@
                                wf-name
                                valid-states)}))))
     (if-not (empty? @errors)
-      (raise (format "Workflow[%s] had valiaiton erros: %s\n"
-                     wf-name
-                     (join "\n"
-                           (map :msg @errors)))))
+      (throw (RuntimeException. (format "Workflow[%s] had valiaiton erros: %s\n"
+                                         wf-name
+                                         (join "\n"
+                                               (map :msg @errors))))))
     true))
 
 (defn register-workflow [name definition]
@@ -72,7 +71,7 @@
 (defn lookup-workflow [wf-name]
   (let [wf (get @*registered-workflows* wf-name)]
     (if-not wf
-      (raise "Error: no registered workflow named %s -- did you call:\n\n  (register-workflow %s *%s*)\n" wf-name wf-name (name wf-name)))
+      (throw (RuntimeException. (format "Error: no registered workflow named %s -- did you call:\n\n  (register-workflow %s *%s*)\n" wf-name wf-name (name wf-name)))))
     wf))
 
 

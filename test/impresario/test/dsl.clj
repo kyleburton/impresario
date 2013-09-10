@@ -3,9 +3,7 @@
   (:use [impresario.core] :reload)
   (:use
    clojure.test
-   impresario.dsl
-   [clj-etl-utils.lang-utils :only [raise]]))
-
+   impresario.dsl))
 
 (on-enter-any!
   (update-in *context*
