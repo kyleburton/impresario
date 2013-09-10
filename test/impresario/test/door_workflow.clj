@@ -44,7 +44,3 @@
   (state :open   {:transitions [:closed]}))
 
 (register-workflow :door-workflow *door-workflow*)
-
-
-
-

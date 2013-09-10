@@ -6,3 +6,4 @@ classes
 README.textile.html
 *~
 .lein-failures
+.lein-deps-sum

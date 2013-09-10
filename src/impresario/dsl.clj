@@ -138,8 +138,8 @@
                *context*       context#]
        (let [res# (do ~@body)]
          (if-not (map? res#)
-           (throw (RuntimeException. (format "Error: on-enter-any! trigger did not return a map! Got [%s] instead."
-                                             res#))))
+           (throw (RuntimeException. (format  "Error: on-enter-any! trigger did not return a map! Got [%s] instead."
+                  res#))))
          res#))))
 
 (defmacro on-exit-any! [& body]
@@ -151,7 +151,7 @@
        (let [res# (do ~@body)]
          (if-not (map? res#)
            (throw (RuntimeException. (format "Error: on-exit-any! trigger did not return a map! Got [%s] instead."
-                          res#))))
+                  res#))))
          res#))))
 
 
@@ -211,4 +211,3 @@
                       *current-state* current-state#
                       *context*       context#]
               (~alias))))))
-
